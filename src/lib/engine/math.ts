@@ -1,3 +1,5 @@
+import type { CheckResult, Project, Status } from "./types";
+
 export const DEG = Math.PI / 180;
 
 export function toRad(deg: number): number {
@@ -253,4 +255,16 @@ export function statusFromEta(eta: number, pass = 1, warn = 0.9): "PASS" | "WARN
   if (eta > pass) return "FAIL";
   if (eta >= warn) return "WARNING";
   return "PASS";
+}
+
+export function mkCheck(partial: Omit<CheckResult, "status"> & { status?: Status }, limits: Project["limits"]): CheckResult {
+  const eta = partial.utilization;
+  const status =
+    partial.status ??
+    (!partial.applicable
+      ? "N/A"
+      : !Number.isFinite(eta)
+        ? "NOT VERIFIED"
+        : statusFromEta(eta, limits.etaPass, limits.etaWarn));
+  return { ...partial, status };
 }

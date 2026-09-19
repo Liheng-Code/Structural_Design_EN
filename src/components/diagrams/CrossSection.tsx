@@ -19,6 +19,8 @@ export function CrossSection({
   const capB = project.capping.enabled ? project.capping.b : 0;
   const rb = project.geometry.riverbed;
   const pav = project.pavement.asphalt + project.pavement.subbase;
+  const isCbp = project.wallSystem === "cbp";
+  const cbp = project.cbp ?? { diameter: 0.8, spacing: 0.95, lateralModel: "individual-pile" };
   const top = rb + H + capH + 0.2;
   const bot = rb - D - 0.8;
   const xL = -B / 2;
@@ -41,8 +43,29 @@ export function CrossSection({
     return `${sx(x0)},${sy(wl)} ${sx(x1)},${sy(wl)} ${sx(x1)},${sy(rb)} ${sx(x0)},${sy(rb)}`;
   };
 
+  const soilColours = ["#dbc49b", "#c7a876", "#b89462", "#a97e52", "#879b72", "#9e8970"];
+  const visibleLayers = project.nativeLayers
+    .map((layer, index) => ({ ...layer, index, top: Math.min(layer.zTop, rb), bottom: Math.max(layer.zBot, bot) }))
+    .filter((layer) => layer.top > layer.bottom);
+  const soilLayerRects = (x: number, width: number, label: boolean) =>
+    visibleLayers.map((layer) => {
+      const y = sy(layer.top);
+      const height = sy(layer.bottom) - y;
+      return (
+        <g key={`${x}-${layer.id}`}>
+          <rect x={x} y={y} width={width} height={height} fill={soilColours[layer.index % soilColours.length]} opacity="0.82" />
+          <rect x={x} y={y} width={width} height={height} fill="url(#hatch-soil)" opacity="0.28" />
+          {label && height > 24 ? (
+            <text x={x + 7} y={y + 15} fill="#382e21" fontSize="10" fontFamily="IBM Plex Sans, sans-serif">
+              {layer.name} | phi' {layer.phi.toFixed(0)} deg | N {layer.sptN.toFixed(0)}
+            </text>
+          ) : null}
+        </g>
+      );
+    });
+
   return (
-    <svg viewBox={`0 0 ${W} ${Ht}`} className="w-full h-auto max-w-full bg-panel" role="img" aria-label="U-shape sheet pile cross-section">
+    <svg viewBox={`0 0 ${W} ${Ht}`} className="w-full h-auto max-w-full bg-panel" role="img" aria-label={`${isCbp ? "Contiguous bored pile" : "Sheet pile"} excavation support cross-section with soil layers`}>
       <defs>
         <pattern id="hatch-soil" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="8" stroke="#b08968" strokeWidth="1.2" />
@@ -54,15 +77,18 @@ export function CrossSection({
           <stop offset="0%" stopColor="#7eabcc" stopOpacity="0.75" />
           <stop offset="100%" stopColor="#4d7a9c" stopOpacity="0.55" />
         </linearGradient>
+        <pattern id="cbpPile" width="18" height="18" patternUnits="userSpaceOnUse">
+          <circle cx="9" cy="9" r="7" fill="#75808a" stroke="#28323b" strokeWidth="1.2" />
+        </pattern>
       </defs>
 
       <rect x="0" y="0" width={W} height={Ht} fill="#f7f4ec" />
 
       <line x1="0" y1={sy(rb)} x2={W} y2={sy(rb)} stroke="#c9c0b0" strokeWidth="1" />
 
-      <rect x={sx(xMin)} y={sy(rb)} width={sx(leftFace) - sx(xMin)} height={sy(bot) - sy(rb)} fill="url(#hatch-soil)" />
-      <rect x={sx(xR)} y={sy(rb)} width={sx(xMax) - sx(xR)} height={sy(bot) - sy(rb)} fill="url(#hatch-soil)" />
-      <rect x={sx(leftFace + t)} y={sy(rb)} width={sx(rightFace) - sx(leftFace + t)} height={sy(bot) - sy(rb)} fill="url(#hatch-soil)" opacity="0.55" />
+      {soilLayerRects(sx(xMin), sx(leftFace) - sx(xMin), true)}
+      {soilLayerRects(sx(xR), sx(xMax) - sx(xR), false)}
+      {soilLayerRects(sx(leftFace + t), sx(rightFace) - sx(leftFace + t), false)}
 
       {water.up > rb ? <polygon points={waterPoly("L", water.up)} fill="url(#waterGrad)" /> : null}
       {water.down > rb ? <polygon points={waterPoly("R", water.down)} fill="url(#waterGrad)" /> : null}
@@ -80,8 +106,8 @@ export function CrossSection({
       <rect x={sx(leftFace + t)} y={sy(rb + H)} width={sx(rightFace) - sx(leftFace + t)} height={sy(rb + H - pav) - sy(rb + H)} fill="#3a3f46" />
       <rect x={sx(leftFace + t)} y={sy(rb + H - project.pavement.subbase)} width={sx(rightFace) - sx(leftFace + t)} height={sy(rb + H - pav) - sy(rb + H - project.pavement.subbase)} fill="#9a9386" />
 
-      <rect x={sx(leftFace)} y={sy(rb + H)} width={sx(leftFace + t) - sx(leftFace)} height={sy(rb - D) - sy(rb + H)} fill="#5f656c" stroke="#2c3036" strokeWidth="1" />
-      <rect x={sx(rightFace)} y={sy(rb + H)} width={sx(rightFace + t) - sx(rightFace)} height={sy(rb - D) - sy(rb + H)} fill="#5f656c" stroke="#2c3036" strokeWidth="1" />
+      <rect x={sx(leftFace)} y={sy(rb + H)} width={sx(leftFace + t) - sx(leftFace)} height={sy(rb - D) - sy(rb + H)} fill={isCbp ? "url(#cbpPile)" : "#5f656c"} stroke="#2c3036" strokeWidth="1" />
+      <rect x={sx(rightFace)} y={sy(rb + H)} width={sx(rightFace + t) - sx(rightFace)} height={sy(rb - D) - sy(rb + H)} fill={isCbp ? "url(#cbpPile)" : "#5f656c"} stroke="#2c3036" strokeWidth="1" />
 
       {project.capping.enabled ? (
         <>
@@ -153,7 +179,9 @@ export function CrossSection({
         Compacted granular fill · {project.coreFill.compaction}% MDD
       </text>
       <text x={sx(0)} y={Ht - 14} textAnchor="middle" fill="#5c564e" fontSize="11" fontFamily="IBM Plex Sans">
-        Riverbed / original ground y = {rb.toFixed(2)} m · precast RC T&G {project.sheetPile.sectionName}
+        {isCbp
+          ? `CBP D=${cbp.diameter.toFixed(2)} m @ ${cbp.spacing.toFixed(2)} m | ${cbp.lateralModel.replace("-", " ")}`
+          : `Riverbed / original ground y = ${rb.toFixed(2)} m | precast RC T&G ${project.sheetPile.sectionName}`}
       </text>
     </svg>
   );

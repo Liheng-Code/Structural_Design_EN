@@ -150,6 +150,10 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    watch: {
+      // Windows can report EBUSY for reference files held by spreadsheet apps.
+      ignored: ["**/docs/**"],
+    },
   },
   preview: {
     host: "127.0.0.1",

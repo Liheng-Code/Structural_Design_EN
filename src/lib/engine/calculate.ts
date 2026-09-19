@@ -24,7 +24,10 @@ import {
   ecmFromFck,
   fctm,
   statusFromEta,
+  mkCheck,
 } from "./math";
+import { cbpWallChecks, variablesCbp } from "./cbp-checks";
+import { cbpSolidRatio } from "./cbp-section";
 import { fmt } from "../utils";
 
 const N = 49;
@@ -241,17 +244,48 @@ function analyseWall(
 ): AnalysisResult {
   const t = p.geometry.wallThickness;
   const b = 1.0;
-  const Ig = p.sheetPile.Ioverride ?? (b * t ** 3) / 12;
-  const Ecm = p.sheetPile.EcmOverride ?? ecmFromFck(p.sheetPile.fck);
-  const EI = Ecm * Ig * p.sheetPile.IeffFactor * 1000;
+  let EI: number;
+  let kSoil: number[];
+  if (p.wallSystem === "cbp") {
+    const s = Math.max(p.cbp.spacing, 0.05);
+    const Ecm = ecmFromFck(p.cbp.fck);
+    if (p.cbp.lateralModel === "individual-pile") {
+      // Each pile's own stiffness, smeared to a per-metre-of-wall value by dividing by
+      // the pile spacing (Master Prompt §20 — do not treat spaced piles as a solid
+      // diaphragm wall).
+      const IgPile = (Math.PI / 64) * p.cbp.diameter ** 4;
+      EI = (Ecm * IgPile * 1000) / s;
+      kSoil = stations.map((st) => {
+        if (st.z > p.geometry.riverbed) return 0;
+        const depth = p.geometry.riverbed - st.z;
+        const kh = p.cbp.khUser && p.cbp.khUser > 0 ? p.cbp.khUser : p.cbp.nh * Math.max(depth, 0.1);
+        // Soil reacts against the pile width only, not the full metre run.
+        return kh * (p.cbp.diameter / s);
+      });
+    } else {
+      // Equivalent-wall idealisation: a solid rectangular section of thickness D — the
+      // riskier assumption flagged by the mandatory Master Prompt §61 warning.
+      const IgWall = (1 * p.cbp.diameter ** 3) / 12;
+      EI = Ecm * IgWall * 1000;
+      kSoil = stations.map((st) => {
+        if (st.z > p.geometry.riverbed) return 0;
+        const depth = p.geometry.riverbed - st.z;
+        return p.cbp.khUser && p.cbp.khUser > 0 ? p.cbp.khUser : p.cbp.nh * Math.max(depth, 0.1);
+      });
+    }
+  } else {
+    const Ig = p.sheetPile.Ioverride ?? (b * t ** 3) / 12;
+    const Ecm = p.sheetPile.EcmOverride ?? ecmFromFck(p.sheetPile.fck);
+    EI = Ecm * Ig * p.sheetPile.IeffFactor * 1000;
+    kSoil = stations.map((st) => {
+      if (st.z > p.geometry.riverbed) return 0;
+      const depth = p.geometry.riverbed - st.z;
+      if (p.sheetPile.khUser && p.sheetPile.khUser > 0) return p.sheetPile.khUser;
+      return p.sheetPile.nh * Math.max(depth, 0.1);
+    });
+  }
   const z = stations.map((s) => s.z);
   const pNet = stations.map((s) => s[netKey]);
-  const kSoil = stations.map((s) => {
-    if (s.z > p.geometry.riverbed) return 0;
-    const depth = p.geometry.riverbed - s.z;
-    if (p.sheetPile.khUser && p.sheetPile.khUser > 0) return p.sheetPile.khUser;
-    return p.sheetPile.nh * Math.max(depth, 0.1);
-  });
 
   const springs: { z: number; k: number }[] = [];
   const activeTies = tiesEnabled
@@ -416,18 +450,6 @@ function crackWidth(p: Project, MEd: number): number {
   const sr = k3 * cnom + k1 * k2 * k4 * p.sheetPile.barDia / Math.max(rhoP, 1e-6);
   const wk = sr * eps;
   return Math.max(wk, 0);
-}
-
-function mkCheck(partial: Omit<CheckResult, "status"> & { status?: Status }, limits: Project["limits"]): CheckResult {
-  const eta = partial.utilization;
-  const status =
-    partial.status ??
-    (!partial.applicable
-      ? "N/A"
-      : !Number.isFinite(eta)
-        ? "NOT VERIFIED"
-        : statusFromEta(eta, limits.etaPass, limits.etaWarn));
-  return { ...partial, status };
 }
 
 function wallChecks(
@@ -806,7 +828,8 @@ function cappingChecks(p: Project, lc: LoadCaseDef, left: AnalysisResult): Check
   const bmm = p.capping.b * 1000;
   const hmm = p.capping.h * 1000;
   const dmm = hmm - p.capping.cover - 16;
-  const MRd = mrdRect(bmm, dmm, p.capping.asBot, p.capping.fck, p.sheetPile.fyk, p.factors.gammaCconc, p.factors.gammaS, p.factors.alphaCc);
+  const cappingFyk = p.wallSystem === "cbp" ? p.cbp.fyk : p.sheetPile.fyk;
+  const MRd = mrdRect(bmm, dmm, p.capping.asBot, p.capping.fck, cappingFyk, p.factors.gammaCconc, p.factors.gammaS, p.factors.alphaCc);
   const VRd = vrdc(bmm, dmm, p.capping.asBot, p.capping.fck, p.factors.gammaCconc);
   const T = left.ties[0]?.T_kNpm ?? 0;
   const s = p.ties[0]?.spacing ?? 1.5;
@@ -922,7 +945,15 @@ function runQC(p: Project): QCItem[] {
   const tiesOk = p.ties.every((t) => t.elevation <= p.geometry.retainedHeight + p.capping.h + 0.5 && t.elevation >= -p.geometry.embedment);
   items.push(ok("QC-08", "Tie levels within wall", tiesOk, tiesOk ? "All tie elevations inside the wall" : "Tie elevation outside wall range"));
   items.push(ok("QC-09", "Embedment positive", p.geometry.embedment > 0, `D=${p.geometry.embedment} m`));
-  items.push(ok("QC-10", "Reinforcement area positive", p.sheetPile.asMainEachFace > 0, `As=${p.sheetPile.asMainEachFace} mm²/m`));
+  const reinfOk = p.wallSystem === "cbp" ? p.cbp.barCount > 0 && p.cbp.barDiameter > 0 : p.sheetPile.asMainEachFace > 0;
+  items.push(
+    ok(
+      "QC-10",
+      "Reinforcement area positive",
+      reinfOk,
+      p.wallSystem === "cbp" ? `${p.cbp.barCount}×${p.cbp.barDiameter} mm bars` : `As=${p.sheetPile.asMainEachFace} mm²/m`,
+    ),
+  );
   items.push(ok("QC-11", "Design approach selected", !!p.codes.designApproach, p.codes.designApproach));
   const topWater = Math.max(p.water.floodUp, p.water.floodDown);
   const wallTop = p.geometry.retainedHeight + (p.capping.enabled ? p.capping.h : 0);
@@ -1001,12 +1032,27 @@ function analyseCase(
   const tiesOn = nTies > 0 && p.designType !== "single-cantilever";
   const left = analyseWall(p, stations, "pNetL", tiesOn, nTies, lc.accidentalTieFail);
   const right = analyseWall(p, stations, "pNetR", tiesOn, nTies, lc.accidentalTieFail);
-  const checks = [
-    ...wallChecks(p, lc, left, "upstream"),
-    ...wallChecks(p, lc, right, "downstream"),
-    ...globalChecks(p, lc, stations, water, fillPlaced),
-    ...cappingChecks(p, lc, left),
-  ];
+
+  let checks: CheckResult[];
+  let cbpResult: LoadCaseResult["cbp"];
+  if (p.wallSystem === "cbp") {
+    const up = cbpWallChecks(p, lc, left, "upstream");
+    const down = cbpWallChecks(p, lc, right, "downstream");
+    checks = [...up.checks, ...down.checks, ...globalChecks(p, lc, stations, water, fillPlaced), ...cappingChecks(p, lc, left)];
+    cbpResult = {
+      solidRatio: cbpSolidRatio(p.cbp.diameter, p.cbp.spacing),
+      lateralModel: p.cbp.lateralModel,
+      upstream: up.interaction,
+      downstream: down.interaction,
+    };
+  } else {
+    checks = [
+      ...wallChecks(p, lc, left, "upstream"),
+      ...wallChecks(p, lc, right, "downstream"),
+      ...globalChecks(p, lc, stations, water, fillPlaced),
+      ...cappingChecks(p, lc, left),
+    ];
+  }
 
   let PaL = 0,
     PwL = 0,
@@ -1050,6 +1096,7 @@ function analyseCase(
     left,
     right,
     checks,
+    cbp: cbpResult,
     forces: { PaL, PaR: PaL, PwL, PwR, PsL, Pp, Wfill, Wstruct, FnetGlobal, Mdst, Mstb },
   };
 }
@@ -1089,20 +1136,36 @@ export function runCalculation(p: Project): CalcBundle {
 function runCalculationInner(p: Project): CalcBundle {
   const qc = runQC(p);
   const t = p.geometry.wallThickness;
-  const derived = {
-    L: p.geometry.retainedHeight + p.geometry.embedment,
-    Binner: p.geometry.totalWidth - 2 * t,
-    cnom: p.sheetPile.cover + p.sheetPile.deltaCdev,
-    dEff: t * 1000 - (p.sheetPile.cover + p.sheetPile.deltaCdev) - p.sheetPile.barDia / 2,
-    fcd: (p.factors.alphaCc * p.sheetPile.fck) / p.factors.gammaCconc,
-    fyd: p.sheetPile.fyk / p.factors.gammaS,
-    KaFill: coeffs(p, p.coreFill.phi).Ka,
-    KpNative: coeffs(p, p.nativeLayers[0]?.phi ?? 30).Kp,
-    K0Fill: k0Jak(phiDesign(p.coreFill.phi, p.factors.gammaPhi)),
-    Ecm: p.sheetPile.EcmOverride ?? ecmFromFck(p.sheetPile.fck),
-    Ig: p.sheetPile.Ioverride ?? (1 * t ** 3) / 12,
-    gammaSubFill: p.coreFill.gammaSat - p.water.gammaW,
-  };
+  const isCbp = p.wallSystem === "cbp";
+  const derived = isCbp
+    ? {
+        L: p.cbp.pileLength,
+        Binner: p.geometry.totalWidth - 2 * t,
+        cnom: p.cbp.cover,
+        dEff: 0.8 * (p.cbp.diameter * 1000),
+        fcd: (p.factors.alphaCc * p.cbp.fck) / p.factors.gammaCconc,
+        fyd: p.cbp.fyk / p.factors.gammaS,
+        KaFill: coeffs(p, p.coreFill.phi).Ka,
+        KpNative: coeffs(p, p.nativeLayers[0]?.phi ?? 30).Kp,
+        K0Fill: k0Jak(phiDesign(p.coreFill.phi, p.factors.gammaPhi)),
+        Ecm: ecmFromFck(p.cbp.fck),
+        Ig: (Math.PI / 64) * p.cbp.diameter ** 4,
+        gammaSubFill: p.coreFill.gammaSat - p.water.gammaW,
+      }
+    : {
+        L: p.geometry.retainedHeight + p.geometry.embedment,
+        Binner: p.geometry.totalWidth - 2 * t,
+        cnom: p.sheetPile.cover + p.sheetPile.deltaCdev,
+        dEff: t * 1000 - (p.sheetPile.cover + p.sheetPile.deltaCdev) - p.sheetPile.barDia / 2,
+        fcd: (p.factors.alphaCc * p.sheetPile.fck) / p.factors.gammaCconc,
+        fyd: p.sheetPile.fyk / p.factors.gammaS,
+        KaFill: coeffs(p, p.coreFill.phi).Ka,
+        KpNative: coeffs(p, p.nativeLayers[0]?.phi ?? 30).Kp,
+        K0Fill: k0Jak(phiDesign(p.coreFill.phi, p.factors.gammaPhi)),
+        Ecm: p.sheetPile.EcmOverride ?? ecmFromFck(p.sheetPile.fck),
+        Ig: p.sheetPile.Ioverride ?? (1 * t ** 3) / 12,
+        gammaSubFill: p.coreFill.gammaSat - p.water.gammaW,
+      };
 
   const loadCases = p.loadCases.filter((lc) => lc.enabled).map((lc) => analyseCase(p, lc));
   const stageResults = p.stages
@@ -1130,10 +1193,11 @@ function runCalculationInner(p: Project): CalcBundle {
       ),
     );
 
-  const handling = handlingCheck(p);
-  const dur = durabilityCheck(p);
+  // Precast handling/two-point lift and the generic sheet-pile durability check do not
+  // apply to cast-in-place CBP piles — cbpWallChecks() already reports its own cover check.
+  const extraChecks = isCbp ? [] : [handlingCheck(p), durabilityCheck(p)];
 
-  const all = [...loadCases.flatMap((lc) => lc.checks), ...stageResults.flatMap((s) => s.checks), handling, dur];
+  const all = [...loadCases.flatMap((lc) => lc.checks), ...stageResults.flatMap((s) => s.checks), ...extraChecks];
   const applicable = all.filter((c) => c.applicable && c.status !== "N/A");
   const byId = new Map<string, CheckResult>();
   for (const c of applicable) {
@@ -1157,7 +1221,17 @@ function runCalculationInner(p: Project): CalcBundle {
   if (!p.codes.seismic) warnings.push("Seismic action is not included. Enable EN 1998 only when the site requires it.");
   if (p.earth.assumeNoScour) warnings.push("Scour at the riverbed is not modelled. Embedment may be unconservative if scour is credible.");
   if (p.traffic.model === "uniform") warnings.push("Traffic is a user-defined equivalent surcharge. It is not an EN 1991-2 Load Model 1 representation unless the user has calibrated q accordingly.");
-  if (p.sheetPile.IeffFactor < 1) warnings.push(`Effective inertia I_eff = ${p.sheetPile.IeffFactor} I_g is an ASSUMPTION for cracked RC.`);
+  if (isCbp) {
+    if (p.cbp.lateralModel === "equivalent-wall") {
+      warnings.push("CBP equivalent wall stiffness assumption requires engineering review.");
+    }
+    warnings.push("Do not treat spaced CBP piles as a solid diaphragm wall unless the equivalent-wall model has been explicitly justified.");
+    if (p.cbp.waterCutoff === "none") {
+      warnings.push("No water-control measure selected between CBP piles — seepage through the gaps has not been assessed.");
+    }
+  } else if (p.sheetPile.IeffFactor < 1) {
+    warnings.push(`Effective inertia I_eff = ${p.sheetPile.IeffFactor} I_g is an ASSUMPTION for cracked RC.`);
+  }
   warnings.push("The granular core is not treated as a rigid structural diaphragm unless the user selects otherwise.");
   warnings.push("Passive resistance mobilisation depends on wall movement, construction disturbance and scour. A user-controlled reduction factor is provided.");
   if (qc.some((q) => q.status === "FAIL")) warnings.push("QC reported FAIL items — do not treat the calculation as complete.");
@@ -1169,7 +1243,7 @@ function runCalculationInner(p: Project): CalcBundle {
 
   return {
     qc,
-    variables: variables(p, derived),
+    variables: isCbp ? variablesCbp(p, derived) : variables(p, derived),
     loadCases,
     stageResults,
     summary,

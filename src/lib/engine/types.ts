@@ -42,6 +42,8 @@ export type SourceTag =
 
 export type Drainage = "drained" | "undrained";
 
+export type RetainingWallSystem = "sheet-pile" | "cbp";
+
 export interface SoilLayer {
   id: string;
   name: string;
@@ -118,6 +120,7 @@ export interface Project {
     notes: string;
   };
   designType: DesignType;
+  wallSystem: RetainingWallSystem;
   codes: {
     nationalAnnex: string;
     edition: string;
@@ -172,6 +175,22 @@ export interface Project {
     sectionName: string;
     EcmOverride: number | null;
     IeffFactor: number;
+    nh: number;
+    khUser: number | null;
+  };
+  cbp: {
+    diameter: number;
+    spacing: number;
+    pileLength: number;
+    fck: number;
+    fyk: number;
+    cover: number;
+    barDiameter: number;
+    barCount: number;
+    stirrupDiameter: number;
+    clearGap: number;
+    waterCutoff: "none" | "grout" | "cutoff-wall";
+    lateralModel: "individual-pile" | "equivalent-wall";
     nh: number;
     khUser: number | null;
   };
@@ -311,7 +330,7 @@ export interface AnalysisResult {
 export interface CheckResult {
   id: string;
   name: string;
-  category: "ULS" | "SLS" | "GEO" | "HYD" | "DUR" | "CON" | "QC";
+  category: "ULS" | "SLS" | "GEO" | "HYD" | "DUR" | "CON" | "QC" | "DET";
   demand: number;
   resistance: number;
   unit: string;
@@ -340,6 +359,20 @@ export interface VariableRow {
   source: SourceTag;
 }
 
+export interface NMPoint {
+  N: number;
+  M: number;
+}
+
+export interface CbpInteractionResult {
+  envelope: NMPoint[];
+  NRd0: number;
+  MRd0: number;
+  balanced: NMPoint;
+  operating: { NEd: number; MEd: number };
+  utilization: number;
+}
+
 export interface LoadCaseResult {
   id: string;
   name: string;
@@ -349,6 +382,12 @@ export interface LoadCaseResult {
   left: AnalysisResult;
   right: AnalysisResult;
   checks: CheckResult[];
+  cbp?: {
+    solidRatio: number;
+    lateralModel: "individual-pile" | "equivalent-wall";
+    upstream: CbpInteractionResult;
+    downstream: CbpInteractionResult;
+  };
   forces: {
     PaL: number;
     PaR: number;

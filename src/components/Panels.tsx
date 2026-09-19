@@ -1,6 +1,7 @@
 import { Button, Card, Field, NumInput, Select, TextInput } from "@/components/ui";
-import { DESIGN_TYPE_LABEL, SECTION_LIBRARY, TIE_DIAMETERS } from "@/lib/engine/defaults";
-import type { DesignApproach, DesignType, EarthMethod, StructuralModel, TrafficModel } from "@/lib/engine/types";
+import { defaultProject, DESIGN_TYPE_LABEL, SECTION_LIBRARY, TIE_DIAMETERS } from "@/lib/engine/defaults";
+import { cbpSolidRatio } from "@/lib/engine/cbp-section";
+import type { DesignApproach, DesignType, EarthMethod, RetainingWallSystem, StructuralModel, TrafficModel } from "@/lib/engine/types";
 import { useProject } from "@/lib/store";
 import { uid } from "@/lib/utils";
 
@@ -10,6 +11,12 @@ export function ProjectPanel() {
   return (
     <Card title="Document information">
       <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Retaining wall system" hint="CBP is a conceptual configuration until its separate EC2/EC7 checks are implemented.">
+          <Select value={p.wallSystem ?? "sheet-pile"} onChange={(e) => patch((q) => { q.wallSystem = e.target.value as RetainingWallSystem; q.cbp ??= defaultProject().cbp; })}>
+            <option value="sheet-pile">Sheet pile wall</option>
+            <option value="cbp">Contiguous bored pile (CBP) wall</option>
+          </Select>
+        </Field>
         <Field label="Project name">
           <TextInput value={p.meta.projectName} onChange={(e) => patch((q) => (q.meta.projectName = e.target.value))} />
         </Field>
@@ -238,6 +245,7 @@ export function SoilPanel() {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs text-muted">Layer colours in the section are tied to this ordered ground model. Check that layer boundaries are continuous and cover the wall toe before relying on any pressure result.</p>
       </Card>
     </div>
   );
@@ -412,6 +420,39 @@ export function SheetPanel() {
         </Field>
         <Field label="n_h subgrade" unit="kN/m³" source="ASSUMPTION">
           <NumInput step={500} value={p.sheetPile.nh} onChange={(n) => patch((q) => (q.sheetPile.nh = n))} />
+        </Field>
+      </div>
+    </Card>
+  );
+}
+
+export function CbpPanel() {
+  const p = useProject((s) => s.project);
+  const patch = useProject((s) => s.patch);
+  const c = p.cbp ?? defaultProject().cbp;
+  const solidRatio = cbpSolidRatio(c.diameter, c.spacing);
+  return (
+    <Card title="Contiguous bored pile (CBP) wall">
+      <p className="mb-3 text-sm text-muted">Spaced piles are not assumed to be a continuous diaphragm or a water cut-off. Select the lateral-interaction model and water-control measure explicitly.</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Pile diameter D" unit="m"><NumInput step={0.05} value={c.diameter} onChange={(n) => patch((q) => (q.cbp.diameter = n))} /></Field>
+        <Field label="Centre spacing s" unit="m"><NumInput step={0.05} value={c.spacing} onChange={(n) => patch((q) => { q.cbp.spacing = n; q.cbp.clearGap = n - q.cbp.diameter; })} /></Field>
+        <Field label="Pile length" unit="m"><NumInput step={0.25} value={c.pileLength} onChange={(n) => patch((q) => (q.cbp.pileLength = n))} /></Field>
+        <Field label="Clear gap" unit="m" source="DERIVED"><NumInput value={c.clearGap} onChange={() => {}} disabled /></Field>
+        <Field label="Projected solid ratio" source="DERIVED"><NumInput value={solidRatio} onChange={() => {}} disabled /></Field>
+        <Field label="Lateral interaction model"><Select value={c.lateralModel} onChange={(e) => patch((q) => (q.cbp.lateralModel = e.target.value as typeof q.cbp.lateralModel))}><option value="individual-pile">Individual pile behaviour</option><option value="equivalent-wall">Equivalent wall (justify)</option></Select></Field>
+        <Field label="Concrete fck" unit="MPa"><NumInput value={c.fck} onChange={(n) => patch((q) => (q.cbp.fck = n))} /></Field>
+        <Field label="Steel fyk" unit="MPa"><NumInput value={c.fyk} onChange={(n) => patch((q) => (q.cbp.fyk = n))} /></Field>
+        <Field label="Nominal cover" unit="mm"><NumInput step={5} value={c.cover} onChange={(n) => patch((q) => (q.cbp.cover = n))} /></Field>
+        <Field label="Longitudinal bars" unit="number"><NumInput step={1} value={c.barCount} onChange={(n) => patch((q) => (q.cbp.barCount = n))} /></Field>
+        <Field label="Bar diameter" unit="mm"><NumInput step={1} value={c.barDiameter} onChange={(n) => patch((q) => (q.cbp.barDiameter = n))} /></Field>
+        <Field label="Stirrup diameter" unit="mm"><NumInput step={1} value={c.stirrupDiameter} onChange={(n) => patch((q) => (q.cbp.stirrupDiameter = n))} /></Field>
+        <Field label="Water-control measure"><Select value={c.waterCutoff} onChange={(e) => patch((q) => (q.cbp.waterCutoff = e.target.value as typeof q.cbp.waterCutoff))}><option value="none">None — seepage assessment required</option><option value="grout">Inter-pile grouting</option><option value="cutoff-wall">Separate cut-off wall</option></Select></Field>
+        <Field label="n_h subgrade" unit="kN/m³" source="ASSUMPTION">
+          <NumInput step={500} value={c.nh} onChange={(n) => patch((q) => (q.cbp.nh = n))} />
+        </Field>
+        <Field label="k_h override" unit="kN/m³" hint="Leave 0 to use n_h·z">
+          <NumInput step={500} value={c.khUser ?? 0} onChange={(n) => patch((q) => (q.cbp.khUser = n > 0 ? n : null))} />
         </Field>
       </div>
     </Card>

@@ -1,14 +1,33 @@
 export interface SoilLayerInput {
   id: string;
   name: string;
-  type: "fill" | "clay" | "sand" | "stiff-clay" | "dense-sand";
+  type: "fill" | "clay" | "sand" | "stiff-clay" | "dense-sand" | "custom";
+  behaviorType?: "cohesive" | "granular" | "rock" | "custom";
   topDepth: number;
   bottomDepth: number;
   gamma: number; // kN/m3 (total/sat unit weight)
+  gammaSat?: number; // kN/m3 (saturated unit weight)
+  gammaEffective?: number; // kN/m3 (effective/submerged unit weight)
   phi: number; // degrees (friction angle)
   c: number; // kPa (cohesion)
   cu: number; // kPa (undrained shear strength)
   sptN?: number; // SPT N-value
+  cptQc?: number; // MPa (CPT cone resistance)
+  e50?: number; // kPa (secant stiffness for drained soil)
+  eoed?: number; // kPa (oedometer stiffness)
+  eur?: number; // kPa (unloading/reloading stiffness)
+  nu?: number; // Poisson's ratio
+  permeability?: number; // m/s
+  ocr?: number; // Overconsolidation ratio
+  initialVoidRatio?: number;
+  compressionIndex?: number;
+  recompressionIndex?: number;
+  preconsolidationStress?: number; // kPa
+  k0?: number; // At-rest earth pressure coefficient
+  rInter?: number; // Soil-pile interface reduction factor
+  characteristicShaftFriction?: number; // kPa
+  characteristicBaseResistance?: number; // kPa
+  drainage: "drained" | "undrained";
   method: "alpha" | "beta" | "empirical";
 }
 
@@ -28,9 +47,15 @@ export interface BoredPileProject {
   cover: number; // mm
   nEd: number; // kN (Design axial compression load)
   mEd: number; // kNm (Design bending moment)
+  safetyFactor: number; // user-selected geotechnical resistance factor
+  designApproach: "DA1-C1" | "DA1-C2" | "DA2" | "DA3";
   layers: SoilLayerInput[];
   numBars: number;
   barDiameter: number; // mm
+  spiralBarDiameter: number; // mm
+  spiralSpacing: number; // mm
+  stiffenerBarDiameter: number; // mm
+  stiffenerSpacing: number; // mm
 }
 
 export interface LayerResistanceResult {
@@ -62,5 +87,9 @@ export interface BoredPileAnalysisResult {
   reinforcementRatio: number; // %
   structuralAxialResistance: number; // kN (N_Rd)
   utilizationStructural: number; // ratio
+  mainBarWeight: number; // kg
+  spiralWeight: number; // kg
+  stiffenerWeight: number; // kg
+  totalRebarWeight: number; // kg
   overallStatus: "PASS" | "FAIL" | "WARNING";
 }

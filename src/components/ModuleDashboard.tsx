@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowRight, Layers, ShieldCheck, LogOut, CheckCircle2, Compass, HardHat } from "lucide-react";
+import { ArrowRight, Layers, ShieldCheck, LogOut, CheckCircle2, Compass, HardHat, CircleDot } from "lucide-react";
 import { useProject } from "@/lib/store";
 
 export function ModuleDashboard() {
@@ -58,8 +58,8 @@ export function ModuleDashboard() {
         </div>
 
         {/* 3 VIEW CARDS GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* CARD 1: U-Shape Precast RC Sheet Pile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {/* CARD 1: Sheet pile */}
           <div 
             onClick={() => setActiveModule("sheet-pile")}
             className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-cyan-500/40 hover:border-cyan-400 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(6,182,212,0.1)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.25)] hover:-translate-y-1"
@@ -96,10 +96,10 @@ export function ModuleDashboard() {
                   Earth Retaining & Flood Wall
                 </p>
                 <h3 className="font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
-                  U-Shape Precast RC Sheet Pile
+                  Sheet Pile Design
                 </h3>
                 <p className="text-xs text-slate-400 font-mono mt-2 leading-relaxed">
-                  Design of precast reinforced concrete U-shaped sheet piles according to EN 1997-1 and EN 1992-1-1. Full elastoplastic finite element calculations, moment/shear diagrams, and crack verification.
+                  Excavation support with staged earth and water pressures, sheet-pile checks, movement review and calculation reporting.
                 </p>
               </div>
 
@@ -120,7 +120,46 @@ export function ModuleDashboard() {
             </button>
           </div>
 
-          {/* CARD 2: Bored Pile Design */}
+          {/* CARD 2: Contiguous bored pile wall */}
+          <div
+            onClick={() => setActiveModule("cbp")}
+            className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-violet-500/40 hover:border-violet-400 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(139,92,246,0.1)] hover:shadow-[0_8px_35px_rgba(139,92,246,0.25)] hover:-translate-y-1"
+          >
+            <div className="absolute top-4 right-4">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-violet-950/80 border border-violet-600/60 text-violet-300 font-semibold">
+                <CircleDot className="size-3" /> Ready
+              </span>
+            </div>
+            <div>
+              <div className="w-full h-44 bg-[#03070e] border border-violet-900/60 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative">
+                <svg viewBox="0 0 240 140" className="w-full h-full" aria-label="Contiguous bored pile wall and soil layers">
+                  <rect x="18" y="30" width="204" height="34" fill="#c7a876" opacity=".55" />
+                  <rect x="18" y="64" width="204" height="50" fill="#879b72" opacity=".55" />
+                  <line x1="18" y1="64" x2="222" y2="64" stroke="#e2c589" strokeDasharray="4 3" />
+                  {[58, 82, 106, 130, 154, 178].map((x) => <circle key={x} cx={x} cy="74" r="13" fill="#596775" stroke="#c4b5fd" strokeWidth="2" />)}
+                  <rect x="44" y="16" width="150" height="11" rx="2" fill="#7c6b9c" stroke="#c4b5fd" />
+                  <line x1="18" y1="48" x2="222" y2="48" stroke="#38bdf8" strokeDasharray="4 3" />
+                  <text x="22" y="43" fill="#7dd3fc" fontSize="8" fontFamily="monospace">GROUNDWATER</text>
+                  <text x="22" y="59" fill="#f1dfb5" fontSize="8" fontFamily="monospace">ALLUVIUM</text>
+                  <text x="22" y="108" fill="#d8efd0" fontSize="8" fontFamily="monospace">DENSE STRATUM</text>
+                </svg>
+              </div>
+              <div className="mb-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-violet-300 font-semibold mb-1">Excavation Retaining Wall</p>
+                <h3 className="font-display text-xl font-bold text-white group-hover:text-violet-200 transition-colors">CBP Wall Design</h3>
+                <p className="text-xs text-slate-400 font-mono mt-2 leading-relaxed">Contiguous bored-pile geometry, layer-based ground model, water-control strategy and staged excavation configuration.</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-violet-200 border border-slate-700">CBP Geometry</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-violet-200 border border-slate-700">Soil Layers</span>
+              </div>
+            </div>
+            <button type="button" className="w-full py-2.5 px-4 bg-violet-700 group-hover:bg-violet-600 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 shadow-lg">
+              <span>Open CBP Design</span><ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* CARD 3: Bored Pile Design */}
           <div 
             onClick={() => setActiveModule("bored-pile")}
             className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1"
@@ -183,7 +222,7 @@ export function ModuleDashboard() {
             </button>
           </div>
 
-          {/* CARD 3: Pile Cap Design */}
+          {/* CARD 4: Pile Cap Design */}
           <div 
             onClick={() => setActiveModule("pile-cap")}
             className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1"

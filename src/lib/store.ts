@@ -24,7 +24,7 @@ export type NavId =
   | "sensitivity"
   | "stages";
 
-export type PlatformModule = "modules" | "sheet-pile" | "bored-pile" | "pile-cap";
+export type PlatformModule = "modules" | "sheet-pile" | "cbp" | "cbp-detail" | "bored-pile" | "pile-cap";
 
 interface Store {
   project: Project;
@@ -81,7 +81,16 @@ export const useProject = create<Store>()(
       setLoadCase: (loadCaseId) => set({ loadCaseId }),
       setHighlight: (highlight) => set({ highlight }),
       setProject: (project) => set({ project }),
-      setActiveModule: (activeModule) => set({ activeModule }),
+      setActiveModule: (activeModule) =>
+        set((s) => ({
+          activeModule,
+          project:
+            activeModule === "cbp"
+              ? { ...s.project, wallSystem: "cbp", cbp: s.project.cbp ?? defaultProject().cbp }
+              : activeModule === "sheet-pile"
+                ? { ...s.project, wallSystem: "sheet-pile" }
+                : s.project,
+        })),
       patch: (fn) =>
         set((s) => {
           const project = structuredClone(s.project);

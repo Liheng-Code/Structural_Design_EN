@@ -17,8 +17,14 @@ export function defaultBoredPileProject(): BoredPileProject {
     cover: 75, // mm
     nEd: 2000, // kN
     mEd: 120, // kNm
+    safetyFactor: 2.5,
+    designApproach: "DA1-C2",
     numBars: 12,
     barDiameter: 25, // mm
+    spiralBarDiameter: 12, // mm
+    spiralSpacing: 200, // mm
+    stiffenerBarDiameter: 16, // mm
+    stiffenerSpacing: 1500, // mm
     layers: [
       {
         id: "L1",
@@ -27,10 +33,20 @@ export function defaultBoredPileProject(): BoredPileProject {
         topDepth: 0.0,
         bottomDepth: 2.0,
         gamma: 18,
+          gammaSat: 19,
         phi: 28,
         c: 0,
         cu: 0,
         sptN: 8,
+        e50: 15000,
+        eoed: 12000,
+        eur: 45000,
+        nu: 0.3,
+        permeability: 1e-5,
+        ocr: 1,
+        k0: 0.53,
+        rInter: 0.7,
+        drainage: "drained",
         method: "beta",
       },
       {
@@ -40,10 +56,20 @@ export function defaultBoredPileProject(): BoredPileProject {
         topDepth: 2.0,
         bottomDepth: 6.0,
         gamma: 17,
+        gammaSat: 18,
         phi: 0,
         c: 0,
         cu: 25,
         sptN: 4,
+        e50: 5000,
+        eoed: 4000,
+        eur: 15000,
+        nu: 0.45,
+        permeability: 1e-9,
+        ocr: 1,
+        k0: 0.55,
+        rInter: 0.6,
+        drainage: "undrained",
         method: "alpha",
       },
       {
@@ -53,10 +79,20 @@ export function defaultBoredPileProject(): BoredPileProject {
         topDepth: 6.0,
         bottomDepth: 12.0,
         gamma: 19,
+        gammaSat: 20,
         phi: 32,
         c: 0,
         cu: 0,
         sptN: 22,
+        e50: 30000,
+        eoed: 24000,
+        eur: 90000,
+        nu: 0.28,
+        permeability: 1e-5,
+        ocr: 1,
+        k0: 0.47,
+        rInter: 0.75,
+        drainage: "drained",
         method: "beta",
       },
       {
@@ -66,10 +102,20 @@ export function defaultBoredPileProject(): BoredPileProject {
         topDepth: 12.0,
         bottomDepth: 18.0,
         gamma: 19,
+        gammaSat: 20,
         phi: 0,
         c: 0,
         cu: 100,
         sptN: 28,
+        e50: 20000,
+        eoed: 16000,
+        eur: 60000,
+        nu: 0.42,
+        permeability: 1e-9,
+        ocr: 2,
+        k0: 0.75,
+        rInter: 0.65,
+        drainage: "undrained",
         method: "alpha",
       },
       {
@@ -79,10 +125,20 @@ export function defaultBoredPileProject(): BoredPileProject {
         topDepth: 18.0,
         bottomDepth: 25.0,
         gamma: 20,
+        gammaSat: 21,
         phi: 36,
         c: 0,
         cu: 0,
         sptN: 42,
+        e50: 50000,
+        eoed: 40000,
+        eur: 150000,
+        nu: 0.25,
+        permeability: 1e-4,
+        ocr: 1,
+        k0: 0.41,
+        rInter: 0.8,
+        drainage: "drained",
         method: "beta",
       },
     ],
@@ -116,7 +172,7 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
     } else {
       const dryPart = layer.gamma * zWater;
       const subDepth = midDepth - zWater;
-      const subGamma = Math.max(1, layer.gamma - 9.81);
+      const subGamma = Math.max(1, (layer.gammaSat ?? layer.gamma) - 9.81);
       sigmaV0 = dryPart + subGamma * subDepth;
     }
     sigmaV0 = Math.max(10, sigmaV0); // minimum effective stress
@@ -158,14 +214,14 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
   const toeLayer = proj.layers.find((l) => proj.length >= l.topDepth && proj.length <= l.bottomDepth) || proj.layers[proj.layers.length - 1];
   
   let baseUnitResistance = 0;
-  if (toeLayer.phi > 0) {
+  if (toeLayer && toeLayer.phi > 0) {
     // For sand: q_b = sigma_v_toe' * N_q (approx N_q ~ 30-50 for phi 36)
     const phiRad = (toeLayer.phi * Math.PI) / 180;
     const Nq = Math.exp(Math.PI * Math.tan(phiRad)) * Math.pow(Math.tan(Math.PI / 4 + phiRad / 2), 2);
     const zToe = proj.length;
-    const sigmaToe = (toeLayer.gamma * Math.min(proj.waterLevel, zToe)) + (Math.max(0, zToe - proj.waterLevel) * (toeLayer.gamma - 9.81));
+    const sigmaToe = (toeLayer.gamma * Math.min(proj.waterLevel, zToe)) + (Math.max(0, zToe - proj.waterLevel) * ((toeLayer.gammaSat ?? toeLayer.gamma) - 9.81));
     baseUnitResistance = Math.min(5000, sigmaToe * Math.min(Nq, 40)); // capping for bored piles
-  } else {
+  } else if (toeLayer) {
     // For clay: q_b = 9 * cu
     baseUnitResistance = 9 * (toeLayer.cu > 0 ? toeLayer.cu : 100);
   }
@@ -173,18 +229,22 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
   const baseResistance = baseUnitResistance * pileArea; // kN
   const totalCharacteristicResistance = Math.round((totalShaft + baseResistance) * 10) / 10;
 
-  // Design resistance with partial factor gamma_t = 1.35
-  const gammaT = 1.35;
+  // User-selected preliminary resistance factor; confirm against the adopted EN 1997 National Annex.
+  const gammaT = Math.min(5, Math.max(2, proj.safetyFactor || 2.5));
   const designResistance = Math.round((totalCharacteristicResistance / gammaT) * 10) / 10;
 
-  const utilizationGeotechnical = Math.round((proj.nEd / designResistance) * 1000) / 1000;
+  const utilizationGeotechnical = designResistance > 0
+    ? Math.round((proj.nEd / designResistance) * 1000) / 1000
+    : Number.POSITIVE_INFINITY;
 
   // Settlement estimates (Elastic compression + soil deformation)
   // Pile elastic compression: delta_L = N * L / (A_c * E_c)
   const Ec = 30000; // MPa -> 30,000,000 kN/m2 for C30/37
   const grossAreaM2 = pileArea;
   const pileElasticSettlement = ((proj.nEd * proj.length) / (grossAreaM2 * Ec * 1000)) * 1000; // mm
-  const soilSettlement = (proj.nEd / (totalCharacteristicResistance * 0.7)) * 4.5; // empirical approximation in mm
+  const soilSettlement = totalCharacteristicResistance > 0
+    ? (proj.nEd / (totalCharacteristicResistance * 0.7)) * 4.5
+    : 0; // no soil profile means no calculable settlement
   const settlementTotal = Math.round((pileElasticSettlement + soilSettlement) * 10) / 10;
   const allowableSettlement = 25.0; // mm
 
@@ -199,6 +259,17 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
   const fyd = (proj.fyk / 1.15); // MPa
   const structuralAxialResistance = Math.round(((Ac * fcd + rebarArea * fyd) / 1000) * 10) / 10; // kN
   const utilizationStructural = Math.round((proj.nEd / structuralAxialResistance) * 1000) / 1000;
+
+  const kgPerMetre = (diameter: number) => (diameter * diameter) / 162;
+  const cageDiameter = Math.max(0.1, D - (2 * proj.cover) / 1000);
+  const mainBarWeight = (proj.numBars * proj.length * kgPerMetre(proj.barDiameter));
+  const spiralTurns = Math.max(1, (proj.length * 1000) / proj.spiralSpacing);
+  const spiralLength = spiralTurns * Math.PI * cageDiameter;
+  const spiralWeight = spiralLength * kgPerMetre(proj.spiralBarDiameter);
+  const stiffenerCount = Math.max(1, Math.ceil((proj.length * 1000) / proj.stiffenerSpacing));
+  const stiffenerLength = stiffenerCount * Math.PI * cageDiameter;
+  const stiffenerWeight = stiffenerLength * kgPerMetre(proj.stiffenerBarDiameter);
+  const totalRebarWeight = mainBarWeight + spiralWeight + stiffenerWeight;
 
   let overallStatus: "PASS" | "FAIL" | "WARNING" = "PASS";
   if (utilizationGeotechnical > 1.0 || utilizationStructural > 1.0 || settlementTotal > allowableSettlement) {
@@ -226,6 +297,10 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
     reinforcementRatio: Math.round(reinforcementRatio * 100) / 100,
     structuralAxialResistance,
     utilizationStructural,
+    mainBarWeight: Math.round(mainBarWeight * 10) / 10,
+    spiralWeight: Math.round(spiralWeight * 10) / 10,
+    stiffenerWeight: Math.round(stiffenerWeight * 10) / 10,
+    totalRebarWeight: Math.round(totalRebarWeight * 10) / 10,
     overallStatus,
   };
 }

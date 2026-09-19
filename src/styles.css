@@ -135,6 +135,48 @@
   .no-print {
     display: none !important;
   }
+  .report-document {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .report-document > .report-cover,
+  .report-document > .report-page {
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    break-inside: auto;
+  }
+  .report-document > .report-cover {
+    min-height: 245mm !important;
+    padding: 20mm 12mm !important;
+    break-after: page;
+  }
+  .report-document > .report-page {
+    padding: 8mm 0 !important;
+    break-before: page;
+  }
+  .report-document table,
+  .report-document svg,
+  .report-document .katex-display {
+    break-inside: avoid;
+  }
+  .report-document h1,
+  .report-document h2,
+  .report-document h3 {
+    break-after: avoid;
+  }
   body {
     background: white;
     color: black;
@@ -144,7 +186,7 @@
   }
   @page {
     size: A4;
-    margin: 14mm 12mm 16mm 12mm;
+    margin: 15mm;
   }
 }
 

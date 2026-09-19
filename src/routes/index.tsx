@@ -4,6 +4,7 @@ import { LandingLoginScreen } from "@/components/LandingLoginScreen";
 import { ModuleDashboard } from "@/components/ModuleDashboard";
 import { BoredPileView } from "@/components/BoredPileView";
 import { PileCapView } from "@/components/PileCapView";
+import { ExcavationSupportView } from "@/components/ExcavationSupportView";
 import { useProject } from "@/lib/store";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -16,7 +17,11 @@ function Home() {
     return <LandingLoginScreen />;
   }
 
-  if (activeModule === "sheet-pile") {
+  if (activeModule === "sheet-pile" || activeModule === "cbp") {
+    return <ExcavationSupportView />;
+  }
+
+  if (activeModule === "cbp-detail") {
     return <CalculatorApp />;
   }
 

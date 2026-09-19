@@ -13,10 +13,12 @@ import {
 import { CrossSection } from "@/components/diagrams/CrossSection";
 import { FreeBody } from "@/components/diagrams/FreeBody";
 import { MVDiagram } from "@/components/diagrams/MVDiagram";
+import { NMInteractionDiagram } from "@/components/diagrams/NMInteractionDiagram";
 import { PressureDiagram } from "@/components/diagrams/PressureDiagram";
 import {
   ApproachPanel,
   CappingPanel,
+  CbpPanel,
   DesignPanel,
   FloodPanel,
   GeometryPanel,
@@ -76,13 +78,24 @@ export function CalculatorApp() {
             <ArrowLeft className="size-3.5 text-cyan-400" />
             <span className="hidden sm:inline">Modules</span>
           </button>
+          {project.wallSystem === "cbp" ? (
+            <button
+              type="button"
+              onClick={() => setActiveModule("cbp")}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono bg-navy-mid/80 hover:bg-navy-mid border border-cyan-500/40 text-paper transition"
+              title="Return to excavation concept workspace"
+            >
+              <ArrowLeft className="size-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Excavation concept</span>
+            </button>
+          ) : null}
           <button className="lg:hidden min-h-10 min-w-10" onClick={() => setMenu(true)} aria-label="Open navigation">
             <Menu className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
             <p className="font-display text-[10px] uppercase tracking-[0.22em] text-paper/70">Eurocode · EN 1990 / 1991 / 1992 / 1997</p>
             <h1 className="truncate font-display text-base font-semibold leading-tight sm:text-lg">
-              U-Shape Precast RC Sheet Pile · Flood Embankment Calculator
+              {project.wallSystem === "cbp" ? "CBP Excavation Support" : "Sheet Pile Excavation Support"} · Design Suite
             </h1>
           </div>
           <StatusPill status={bundle.overall} />
@@ -187,7 +200,7 @@ export function CalculatorApp() {
           {nav === "water" && <WaterPanel />}
           {nav === "flood" && <FloodPanel />}
           {nav === "traffic" && <TrafficPanel />}
-          {nav === "sheet" && <SheetPanel />}
+          {nav === "sheet" && (project.wallSystem === "cbp" ? <CbpPanel /> : <SheetPanel />)}
           {nav === "ties" && <TiesPanel />}
           {nav === "capping" && <CappingPanel />}
           {nav === "materials" && <MaterialsPanel />}
@@ -289,6 +302,24 @@ function ResultsBody({ bundleLc }: { bundleLc: LoadCaseResult; project?: Project
         <MVDiagram analysis={bundleLc.left} mode="d" />
         <p className="mt-1 font-mono text-xs">δ_max = {fmt(bundleLc.left.dmax, 1)} mm</p>
       </Card>
+      {bundleLc.cbp ? (
+        <>
+          <Card title="N-M interaction · upstream">
+            <NMInteractionDiagram interaction={bundleLc.cbp.upstream} title="Upstream pile" />
+          </Card>
+          <Card title="N-M interaction · downstream">
+            <NMInteractionDiagram interaction={bundleLc.cbp.downstream} title="Downstream pile" />
+          </Card>
+          <Card title="CBP wall model">
+            <p className="text-sm">
+              Wall solid ratio D/s = <span className="font-mono">{fmt(bundleLc.cbp.solidRatio, 3)}</span>
+            </p>
+            <p className="mt-1 text-sm">
+              Lateral model: <span className="font-mono">{bundleLc.cbp.lateralModel}</span>
+            </p>
+          </Card>
+        </>
+      ) : null}
       {bundleLc.notes.length ? (
         <Card title="Load-case notes" className="sm:col-span-3">
           <ul className="list-disc pl-5 text-sm space-y-1">

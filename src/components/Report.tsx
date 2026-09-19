@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Equation } from "@/components/Equation";
+import { NMInteractionDiagram } from "@/components/diagrams/NMInteractionDiagram";
 import { StatusPill } from "@/components/ui";
 import type { CalcBundle, CheckResult, LoadCaseResult, Project } from "@/lib/engine/types";
 import { fmt } from "@/lib/utils";
@@ -118,12 +119,27 @@ export function Report({ project, bundle, lc }: { project: Project; bundle: Calc
       </Section>
 
       <Section title="5. Structural analysis">
-        <p className="text-sm">
-          Each sheet-pile line is a metre-strip beam with flexural rigidity E_cm I_eff, Winkler springs below riverbed (n_h z) and
-          elastic tie springs. The granular core is not a rigid diaphragm. Reference clause to be confirmed against the
-          project-adopted National Annex / Eurocode edition.
-        </p>
-        <Equation latex={`EI = E_{cm} I_{eff} = ${fmt(d.Ecm, 0)}\\,\\text{MPa}\\times ${fmt(d.Ig * d.Ecm ? project.sheetPile.IeffFactor : 1, 2)} I_g`} tag={next()} />
+        {project.wallSystem === "cbp" ? (
+          <p className="text-sm">
+            Each CBP pile line is a beam-on-elastic-foundation model with flexural rigidity derived per the selected lateral
+            model ({project.cbp.lateralModel}) — see Master Prompt §20. Winkler springs below riverbed use the CBP subgrade
+            modulus n_h. The granular core is not a rigid diaphragm.
+          </p>
+        ) : (
+          <p className="text-sm">
+            Each sheet-pile line is a metre-strip beam with flexural rigidity E_cm I_eff, Winkler springs below riverbed (n_h z) and
+            elastic tie springs. The granular core is not a rigid diaphragm. Reference clause to be confirmed against the
+            project-adopted National Annex / Eurocode edition.
+          </p>
+        )}
+        <Equation
+          latex={
+            project.wallSystem === "cbp"
+              ? `EI = E_{cm} I_g\\,/\\,s = ${fmt(d.Ecm, 0)}\\,\\text{MPa}\\times I_g\\,/\\,${fmt(project.cbp.spacing, 2)}\\,\\text{m (individual-pile model)}`
+              : `EI = E_{cm} I_{eff} = ${fmt(d.Ecm, 0)}\\,\\text{MPa}\\times ${fmt(d.Ig * d.Ecm ? project.sheetPile.IeffFactor : 1, 2)} I_g`
+          }
+          tag={next()}
+        />
         {lc ? (
           <>
             <p className="text-sm">
@@ -138,12 +154,36 @@ export function Report({ project, bundle, lc }: { project: Project; bundle: Calc
         ) : null}
       </Section>
 
-      <Section title="6. RC section (EN 1992-1-1)">
-        <Equation latex={`f_{cd} = \\alpha_{cc} f_{ck}/\\gamma_C = ${fmt(d.fcd, 2)}\\,\\text{MPa},\\quad f_{yd}=f_{yk}/\\gamma_S=${fmt(d.fyd, 0)}\\,\\text{MPa}`} tag={next()} />
-        <Equation latex={`d = t - c_{nom} - \\phi/2 = ${fmt(d.dEff, 0)}\\,\\text{mm}`} tag={next()} />
-        <Equation latex={`x = \\frac{A_s f_{yd}}{0.8 f_{cd} b},\\quad z = d - 0.4x,\\quad M_{Rd}=A_s f_{yd} z`} tag={next()} />
-        <Equation latex={`V_{Rd,c}=[C_{Rd,c} k (100\\rho_l f_{ck})^{1/3}]bd \\ge v_{min}bd`} tag={next()} />
-      </Section>
+      {project.wallSystem === "cbp" ? (
+        <Section title="6. CBP structural check (EN 1992-1-1, circular section)">
+          <p className="text-sm">
+            Flexure, shear and axial resistance are computed for the circular pile section by fibre discretisation of the
+            EN 1992-1-1 §3.1.7 stress-strain law, generating an N-M interaction envelope. Reinforcement detailing (minimum/
+            maximum longitudinal, transverse, anchorage, lap length) follows EN 1992-1-1 §8/§9.
+          </p>
+          <Equation latex={`f_{cd} = \\alpha_{cc} f_{ck}/\\gamma_C = ${fmt(d.fcd, 2)}\\,\\text{MPa},\\quad f_{yd}=f_{yk}/\\gamma_S=${fmt(d.fyd, 0)}\\,\\text{MPa}`} tag={next()} />
+          <Equation latex={`V_{Rd,c}=[C_{Rd,c} k (100\\rho_l f_{ck})^{1/3}+k_1\\sigma_{cp}]\\,b_w d,\\quad b_w\\approx0.9D,\\ d\\approx0.8D`} tag={next()} />
+          {lc?.cbp ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wide text-muted">Upstream pile</p>
+                <NMInteractionDiagram interaction={lc.cbp.upstream} title="Upstream pile" />
+              </div>
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wide text-muted">Downstream pile</p>
+                <NMInteractionDiagram interaction={lc.cbp.downstream} title="Downstream pile" />
+              </div>
+            </div>
+          ) : null}
+        </Section>
+      ) : (
+        <Section title="6. RC section (EN 1992-1-1)">
+          <Equation latex={`f_{cd} = \\alpha_{cc} f_{ck}/\\gamma_C = ${fmt(d.fcd, 2)}\\,\\text{MPa},\\quad f_{yd}=f_{yk}/\\gamma_S=${fmt(d.fyd, 0)}\\,\\text{MPa}`} tag={next()} />
+          <Equation latex={`d = t - c_{nom} - \\phi/2 = ${fmt(d.dEff, 0)}\\,\\text{mm}`} tag={next()} />
+          <Equation latex={`x = \\frac{A_s f_{yd}}{0.8 f_{cd} b},\\quad z = d - 0.4x,\\quad M_{Rd}=A_s f_{yd} z`} tag={next()} />
+          <Equation latex={`V_{Rd,c}=[C_{Rd,c} k (100\\rho_l f_{ck})^{1/3}]bd \\ge v_{min}bd`} tag={next()} />
+        </Section>
+      )}
 
       <Section title="7. Verification of the selected load case">
         {lc ? <CheckTable checks={lc.checks} /> : <p>Select a load case.</p>}
