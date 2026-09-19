@@ -105,9 +105,39 @@ function surcharge(p: Project, trafficOn: boolean, constructionOn: boolean): num
   return q;
 }
 
-function uAt(z: number, wl: number, gw: number): number {
-  const water = Math.max(wl, gw);
-  return Math.max(0, water - z) * 9.81;
+export function computeLayerPorePressure(
+  layers: SoilLayer[],
+  z: number,
+  defaultWl: number,
+  gammaW: number = 9.81,
+  totalStress: number = 0
+): number {
+  const layer = layers.find((L) => z <= L.zTop + 1e-6 && z >= L.zBot - 1e-6);
+  if (!layer) return Math.max(0, defaultWl - z) * gammaW;
+
+  const mode = layer.porePressureMode ?? "hydrostatic";
+  if (mode === "zero") return 0;
+
+  if (mode === "user-defined") {
+    if (layer.porePressureTop !== undefined && layer.porePressureBot !== undefined) {
+      const dz = Math.max(0.001, layer.zTop - layer.zBot);
+      const frac = Math.max(0, Math.min(1, (layer.zTop - z) / dz));
+      return layer.porePressureTop + frac * (layer.porePressureBot - layer.porePressureTop);
+    }
+    if (layer.porePressure !== undefined) return layer.porePressure;
+  }
+
+  if (mode === "ru" && layer.ru !== undefined) {
+    return Math.max(0, layer.ru * totalStress);
+  }
+
+  if (mode === "piezometric" && layer.piezometricHead !== undefined) {
+    return Math.max(0, layer.piezometricHead - z) * gammaW;
+  }
+
+  // Hydrostatic with layer-specific groundwater table if enabled, else default
+  const effWl = layer.hasWaterTable && layer.waterTable !== undefined ? layer.waterTable : defaultWl;
+  return Math.max(0, effWl - z) * gammaW;
 }
 
 function sigVNative(p: Project, z: number, wl: number): { tot: number; u: number; eff: number } {
@@ -119,12 +149,13 @@ function sigVNative(p: Project, z: number, wl: number): { tot: number; u: number
     const top = Math.min(cursor, L.zTop);
     const bot = Math.max(z, L.zBot);
     if (bot >= top) continue;
-    const sat = 0.5 * (top + bot) < wl;
+    const layerWl = L.hasWaterTable && L.waterTable !== undefined ? L.waterTable : wl;
+    const sat = 0.5 * (top + bot) < layerWl;
     tot += (sat ? L.gammaSat : L.gamma) * (top - bot);
     cursor = bot;
     if (cursor <= z + 1e-9) break;
   }
-  const u = Math.max(0, wl - z) * p.water.gammaW;
+  const u = computeLayerPorePressure(p.nativeLayers, z, wl, p.water.gammaW, tot);
   return { tot, u, eff: Math.max(0, tot - u) };
 }
 

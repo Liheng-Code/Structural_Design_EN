@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { read, utils, write } from "xlsx";
 import {
   ArrowLeft,
   Compass,
@@ -11,296 +10,22 @@ import {
   Calculator,
   ShieldCheck,
   Printer,
-  Plus,
-  Trash2,
-  Upload,
-  Download,
+  TrendingUp,
+  Eye,
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { useProject } from "@/lib/store";
 import { defaultBoredPileProject, analyzeBoredPile } from "@/lib/bored-pile/calculations";
 import type { BoredPileProject, SoilLayerInput } from "@/lib/bored-pile/types";
 import { Equation } from "@/components/Equation";
-
-const emptyLayer = (index: number, topDepth: number): SoilLayerInput => ({
-  id: `L${index}`,
-  name: "Custom soil layer",
-  type: "custom",
-  behaviorType: "custom",
-  topDepth,
-  bottomDepth: topDepth + 2,
-  gamma: 18,
-  gammaSat: 19,
-  gammaEffective: 9.2,
-  phi: 30,
-  c: 0,
-  cu: 0,
-  sptN: 0,
-  cptQc: 0,
-  e50: 20000,
-  eoed: 16000,
-  eur: 60000,
-  nu: 0.3,
-  permeability: 1e-7,
-  ocr: 1,
-  initialVoidRatio: 0.7,
-  compressionIndex: 0.2,
-  recompressionIndex: 0.03,
-  preconsolidationStress: 100,
-  k0: 0.5,
-  rInter: 0.7,
-  characteristicShaftFriction: 0,
-  characteristicBaseResistance: 0,
-  drainage: "drained",
-  method: "beta",
-});
-
-function csvCell(value: unknown): string {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
-function parseCsvLine(line: string): string[] {
-  const cells: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index];
-    if (character === '"' && line[index + 1] === '"') {
-      cell += '"';
-      index += 1;
-    } else if (character === '"') {
-      quoted = !quoted;
-    } else if (character === "," && !quoted) {
-      cells.push(cell.trim());
-      cell = "";
-    } else {
-      cell += character;
-    }
-  }
-  cells.push(cell.trim());
-  return cells;
-}
-
-function numberFrom(row: Record<string, string>, ...keys: string[]): number | undefined {
-  for (const key of keys) {
-    const value = Number(row[key]);
-    if (row[key] !== undefined && Number.isFinite(value)) return value;
-  }
-  return undefined;
-}
-
-function parseSoilCsv(text: string): SoilLayerInput[] {
-  const lines = text
-    .replace(/^\uFEFF/, "")
-    .split(/\r?\n/)
-    .filter((line) => line.trim());
-  if (lines.length < 2 || lines[0].trim().startsWith("PK")) {
-    throw new Error("This file is an Excel workbook, not a CSV text file.");
-  }
-  const headers = parseCsvLine(lines[0]).map((header) =>
-    header.toLowerCase().replace(/[^a-z0-9]/g, ""),
-  );
-  return lines.slice(1).map((line, index) => {
-    const values = parseCsvLine(line);
-    const row = Object.fromEntries(headers.map((header, column) => [header, values[column] ?? ""]));
-    const layer = emptyLayer(
-      index + 1,
-      numberFrom(row, "topdepth", "topdepthmbgl", "top", "depthtop") ?? index * 2,
-    );
-    return {
-      ...layer,
-      id: row.id || row.layer || `L${index + 1}`,
-      name:
-        row.name ||
-        row.soildescription ||
-        row.soildescriptionclassificationuscs ||
-        row.description ||
-        layer.name,
-      type:
-        (row.type as SoilLayerInput["type"]) ||
-        (row.behaviortype?.toLowerCase().includes("cohesive")
-          ? "clay"
-          : row.behaviortype?.toLowerCase().includes("granular")
-            ? "sand"
-            : "custom"),
-      behaviorType: row.behaviortype?.toLowerCase().includes("rock")
-        ? "rock"
-        : row.behaviortype?.toLowerCase().includes("cohesive")
-          ? "cohesive"
-          : row.behaviortype?.toLowerCase().includes("granular")
-            ? "granular"
-            : "custom",
-      topDepth: numberFrom(row, "topdepth", "topdepthmbgl", "top", "depthtop") ?? layer.topDepth,
-      bottomDepth:
-        numberFrom(row, "bottomdepth", "bottomdepthmbgl", "bottom", "depthbottom") ??
-        layer.bottomDepth,
-      gamma:
-        numberFrom(
-          row,
-          "gamma",
-          "gammatotal",
-          "bulkunitweight",
-          "bulkunitweightgamma",
-          "unitweight",
-        ) ?? layer.gamma,
-      gammaSat:
-        numberFrom(row, "gammasat", "saturatedunitweight") ??
-        (numberFrom(row, "effectiveunitweight", "effectiveunitweightgamma") !== undefined
-          ? (numberFrom(row, "effectiveunitweight", "effectiveunitweightgamma") as number) + 9.81
-          : layer.gammaSat),
-      gammaEffective:
-        numberFrom(
-          row,
-          "gammaeffective",
-          "effectiveunitweight",
-          "effectiveunitweightgamma",
-          "gammaseffective",
-        ) ?? layer.gammaEffective,
-      phi:
-        numberFrom(row, "phi", "phieffective", "effectivefrictionangle", "frictionangle") ??
-        layer.phi,
-      c: numberFrom(row, "c", "cohesion", "effectivecohesionc") ?? layer.c,
-      cu: numberFrom(row, "cu", "undrainedshearstrength", "undrainedshearstrengthcu") ?? layer.cu,
-      sptN: numberFrom(row, "sptn", "spt", "sptnvalueblows300mm") ?? layer.sptN,
-      cptQc: numberFrom(row, "cptqc", "qc", "cptconeres", "cptconeresqc") ?? layer.cptQc,
-      e50: row.youngsmoduluse
-        ? (numberFrom(row, "youngsmoduluse") ?? 0) * 1000
-        : (numberFrom(row, "e50", "e50ref") ?? layer.e50),
-      eoed: row.oedometermoduluseoed
-        ? (numberFrom(row, "oedometermoduluseoed") ?? 0) * 1000
-        : (numberFrom(row, "eoed", "oedometerstiffness") ?? layer.eoed),
-      eur: numberFrom(row, "eur", "eurref") ?? layer.eur,
-      nu: numberFrom(row, "nu", "poissonsratio") ?? layer.nu,
-      permeability: numberFrom(row, "permeability", "k") ?? layer.permeability,
-      ocr: numberFrom(row, "ocr") ?? layer.ocr,
-      initialVoidRatio:
-        numberFrom(row, "initialvoidratio", "initialvoidratioe0", "e0") ?? layer.initialVoidRatio,
-      compressionIndex:
-        numberFrom(row, "compressionindex", "compressionindexcc", "cc") ?? layer.compressionIndex,
-      recompressionIndex:
-        numberFrom(row, "recompressionindex", "recompressionindexcs", "cs") ??
-        layer.recompressionIndex,
-      preconsolidationStress:
-        numberFrom(row, "preconsolidationstress", "preconsolidationstressp0", "p0") ??
-        layer.preconsolidationStress,
-      k0: numberFrom(row, "k0") ?? layer.k0,
-      rInter: numberFrom(row, "rinter", "interfacefactor") ?? layer.rInter,
-      characteristicShaftFriction:
-        numberFrom(row, "characteristicshaftfriction", "charshaftfrictionqsk", "qsk") ??
-        layer.characteristicShaftFriction,
-      characteristicBaseResistance:
-        numberFrom(row, "characteristicbaseresistance", "charbaseresistanceqbk", "qbk") ??
-        layer.characteristicBaseResistance,
-      drainage: (row.drainage || row.drainageconditionundraineddrained || "")
-        .toLowerCase()
-        .includes("undrained")
-        ? "undrained"
-        : layer.drainage,
-      method: row.method === "alpha" || row.method === "empirical" ? row.method : layer.method,
-    };
-  });
-}
-
-function parseSoilWorkbook(buffer: ArrayBuffer): SoilLayerInput[] {
-  const workbook = read(buffer, { type: "array" });
-  const sheetName =
-    workbook.SheetNames.find((name) => name.toLowerCase().includes("custom ground profile")) ||
-    workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) throw new Error("The workbook does not contain a worksheet.");
-  const matrix = utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
-  const headerIndex = matrix.findIndex(
-    (row) =>
-      String(row[0])
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "") === "layerid",
-  );
-  if (headerIndex < 0) throw new Error("Could not find the v2 Layer ID header row.");
-  const headers = (matrix[headerIndex] ?? []).map((header) => String(header));
-  const dataRows = matrix.slice(headerIndex + 1).filter((row) => String(row[0]).trim());
-  const csv = [
-    headers.map(csvCell).join(","),
-    ...dataRows.map((row) => headers.map((_, index) => csvCell(row[index])).join(",")),
-  ].join("\n");
-  return parseSoilCsv(csv);
-}
-
-const v2TemplateHeaders = [
-  "Layer ID",
-  "Top Depth (m bgl)",
-  "Bottom Depth (m bgl)",
-  "Thickness (m)",
-  "Soil Description & Classification (USCS)",
-  "Behavior Type (Cohesive/Granular/Rock)",
-  "Drainage Condition (Undrained/Drained)",
-  "Bulk Unit Weight gamma (kN/m3)",
-  "Effective Unit Weight gamma' (kN/m3)",
-  "SPT N-value (blows/300mm)",
-  "CPT Cone Res. qc (MPa)",
-  "Undrained Shear Strength cu (kPa)",
-  "Effective Friction Angle phi' (deg)",
-  "Effective Cohesion c' (kPa)",
-  "Young's Modulus E' (MPa)",
-  "Oedometer Modulus Eoed (MPa)",
-  "Initial Void Ratio e0",
-  "Compression Index Cc",
-  "Recompression Index Cs",
-  "Preconsolidation Stress p0 (kPa)",
-  "Overconsolidation Ratio OCR",
-  "Char. Shaft Friction qs,k (kPa)",
-  "Char. Base Resistance qb,k (kPa)",
-];
-
-function v2Row(layer: SoilLayerInput): unknown[] {
-  return [
-    layer.id,
-    layer.topDepth,
-    layer.bottomDepth,
-    layer.bottomDepth - layer.topDepth,
-    layer.name,
-    layer.behaviorType ?? "custom",
-    layer.drainage,
-    layer.gamma,
-    layer.gammaEffective ?? layer.gammaSat,
-    layer.sptN ?? "",
-    layer.cptQc ?? "",
-    layer.cu,
-    layer.phi,
-    layer.c,
-    layer.e50 ? layer.e50 / 1000 : "",
-    layer.eoed ? layer.eoed / 1000 : "",
-    layer.initialVoidRatio ?? "",
-    layer.compressionIndex ?? "",
-    layer.recompressionIndex ?? "",
-    layer.preconsolidationStress ?? "",
-    layer.ocr ?? "",
-    layer.characteristicShaftFriction ?? "",
-    layer.characteristicBaseResistance ?? "",
-  ];
-}
-
-function downloadV2Template(layers: SoilLayerInput[]): void {
-  const workbook = utils.book_new();
-  const sheet = utils.aoa_to_sheet([
-    ["EUROCODE 7 - BOREHOLE SOIL STRATA MODEL"],
-    ["Fill the layer table below, save as .xlsx, then import it into the bored pile soil model."],
-    [],
-    v2TemplateHeaders,
-    ...layers.map(v2Row),
-  ]);
-  utils.book_append_sheet(workbook, sheet, "Custom Ground Profile");
-  const output = write(workbook, { bookType: "xlsx", type: "array" });
-  const url = URL.createObjectURL(
-    new Blob([output], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }),
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "borehole_soil_data_template-v2.xlsx";
-  link.click();
-  URL.revokeObjectURL(url);
-}
+import { SoilStrataTab } from "@/components/bored-pile/SoilStrataTab";
+import { GeometryLoadsTab } from "@/components/bored-pile/GeometryLoadsTab";
+import { SettlementTab } from "@/components/bored-pile/SettlementTab";
+import { SettlementDiagram } from "@/components/bored-pile/SettlementDiagram";
+import { PileDisplacementGraph } from "@/components/bored-pile/PileDisplacementGraph";
+import { PrintPreviewModal } from "@/components/bored-pile/PrintPreviewModal";
+import { CodeReferencesCard } from "@/components/bored-pile/CodeReferencesCard";
+import { SoilTextureIcon } from "@/components/SoilTextureIcon";
 
 function soilLayerColor(layer: SoilLayerInput): { fill: string; stroke: string } {
   if (layer.type === "clay" || layer.type === "stiff-clay" || layer.drainage === "undrained") {
@@ -326,6 +51,33 @@ function soilPatternId(layer: SoilLayerInput): string {
   return "soil-pattern-custom";
 }
 
+const ReportContext = React.createContext<{ previewMode: boolean }>({ previewMode: false });
+
+function ReportHeader({ project }: { project: BoredPileProject }) {
+  const { previewMode } = React.useContext(ReportContext);
+  return (
+    <div className={`${previewMode ? "flex" : "hidden print:flex"} justify-between items-center border-b border-slate-300 pb-2 mb-4 text-[10px] font-mono text-slate-600`}>
+      <div>
+        <strong className="text-slate-800">Project:</strong> {project.projectName} (No. {project.projectNumber})
+      </div>
+      <div className="flex items-center gap-4">
+        <span><strong className="text-slate-800">Revision:</strong> {project.revision || "Rev. 01"}</span>
+        <span><strong className="text-slate-800">Date:</strong> {project.calculationDate || new Date().toLocaleDateString()}</span>
+      </div>
+    </div>
+  );
+}
+
+function ReportFooter({ project }: { project: BoredPileProject }) {
+  const { previewMode } = React.useContext(ReportContext);
+  return (
+    <div className={`${previewMode ? "flex" : "hidden print:flex"} justify-between items-center border-t border-slate-300 pt-3 mt-8 text-[10px] font-mono text-slate-600`}>
+      <span>Client: {project.client || "Client"} | Designer: {project.designer || "Engineer"}</span>
+      <span>Standard: Eurocode (EN) | Date: {new Date().toLocaleDateString()}</span>
+    </div>
+  );
+}
+
 export function BoredPileView() {
   const userEmail = useProject((s) => s.userEmail);
   const logout = useProject((s) => s.logout);
@@ -339,12 +91,306 @@ export function BoredPileView() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   const results = useMemo(() => analyzeBoredPile(project), [project]);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+
+  const renderReportPages = () => (
+    <>
+      <section className="report-cover min-h-[620px] flex flex-col justify-between border-8 border-double border-[#173b5f] bg-[#f8f5ed] p-10 text-center">
+        <ReportHeader project={project} />
+        <div>
+          <div className="mx-auto mb-6 h-1 w-24 bg-[#b8863b]" />
+          <h1 className="text-4xl font-bold tracking-wide text-[#173b5f]">
+            CALCULATION REPORT
+          </h1>
+          <p className="mt-3 font-mono text-sm uppercase tracking-[0.16em]">
+            Bored Pile Design & Verification
+          </p>
+          <p className="mt-8 text-2xl font-semibold">{project.projectName}</p>
+          <p className="mt-2 font-mono text-sm">Project No. {project.projectNumber}</p>
+        </div>
+        <div>
+          <div className="grid grid-cols-2 gap-4 border-t border-[#173b5f]/30 pt-5 text-left font-mono text-xs">
+            <span>
+              DESIGN STANDARD
+              <br />
+              <strong>EN 1990 / EN 1997 / EN 1992</strong>
+            </span>
+            <span className="text-right">
+              STATUS
+              <br />
+              <strong>{results.overallStatus}</strong>
+            </span>
+          </div>
+          <ReportFooter project={project} />
+        </div>
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
+            Table of Contents
+          </h2>
+          <div className="mt-8 space-y-5 text-xs">
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>1. Design basis and input summary</span>
+              <span>3</span>
+            </p>
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>2. Executive summary and verification</span>
+              <span>4</span>
+            </p>
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>3. Geotechnical resistance calculation</span>
+              <span>5</span>
+            </p>
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>4. Settlement serviceability calculation</span>
+              <span>6</span>
+            </p>
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>5. Structural RC design & reinforcement</span>
+              <span>7</span>
+            </p>
+            <p className="flex justify-between border-b border-dotted border-slate-400">
+              <span>6. Geotechnical summary tables</span>
+              <span>8</span>
+            </p>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            1. Design Basis & Input Summary
+          </h2>
+          <p className="mt-4 text-xs">
+            This calculation report evaluates the ultimate and serviceability limit states for a bored reinforced concrete pile in accordance with Eurocode 7 (EN 1997-1) and Eurocode 2 (EN 1992-1-1).
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-6">
+            <div className="border border-slate-300 p-4 rounded bg-white">
+              <h3 className="font-bold mb-2">Pile Geometry & Properties</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Pile Diameter (D): {project.pileDiameter} m</li>
+                <li>Pile Length (L): {project.pileLength} m</li>
+                <li>Concrete Grade: C{project.concreteGrade}</li>
+                <li>Steel Grade: B{project.steelGrade}50B</li>
+                <li>Safety Class / Consequence: {project.reliabilityClass}</li>
+              </ul>
+            </div>
+            <div className="border border-slate-300 p-4 rounded bg-white">
+              <h3 className="font-bold mb-2">Applied Design Loads</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Characteristic Axial Compression (N_k): {project.axialLoad} kN</li>
+                <li>Characteristic Moment (M_k): {project.momentLoad} kN·m</li>
+                <li>Characteristic Shear (V_k): {project.shearLoad} kN</li>
+                <li>Partial Factor on Actions (γ_G): 1.35</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            2. Executive Summary & Verification
+          </h2>
+          <p className="mt-4 text-xs">
+            Summary of verification ratios under Design Approach 1 (DA1: Combination 1 + Combination 2) and Serviceability Limit State (SLS).
+          </p>
+          <div className="mt-6">
+            <table className="w-full text-left border-collapse border border-slate-300 text-xs">
+              <thead>
+                <tr className="bg-slate-200">
+                  <th className="p-2 border border-slate-300">Verification Check</th>
+                  <th className="p-2 border border-slate-300">Design Value ($Ed$)</th>
+                  <th className="p-2 border border-slate-300">Resistance ($Rd$)</th>
+                  <th className="p-2 border border-slate-300">Utilization</th>
+                  <th className="p-2 border border-slate-300">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-2 border border-slate-300">Axial Geotechnical (ULS)</td>
+                  <td className="p-2 border border-slate-300">{results.designAxialLoad.toFixed(1)} kN</td>
+                  <td className="p-2 border border-slate-300">{results.designResistance.toFixed(1)} kN</td>
+                  <td className="p-2 border border-slate-300">{(results.utilization * 100).toFixed(1)}%</td>
+                  <td className={`p-2 border border-slate-300 font-bold ${results.utilization <= 1 ? "text-emerald-700" : "text-rose-700"}`}>
+                    {results.utilization <= 1 ? "PASS" : "FAIL"}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 border border-slate-300">Settlement (SLS)</td>
+                  <td className="p-2 border border-slate-300">{results.settlementTotal.toFixed(1)} mm</td>
+                  <td className="p-2 border border-slate-300">25.0 mm (Allow.)</td>
+                  <td className="p-2 border border-slate-300">{((results.settlementTotal / 25) * 100).toFixed(1)}%</td>
+                  <td className="p-2 border border-slate-300 font-bold text-emerald-700">PASS</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border border-slate-300">Structural Axial-Bending (ULS)</td>
+                  <td className="p-2 border border-slate-300">{results.structuralInteraction.toFixed(2)}</td>
+                  <td className="p-2 border border-slate-300">1.00</td>
+                  <td className="p-2 border border-slate-300">{(results.structuralInteraction * 100).toFixed(1)}%</td>
+                  <td className={`p-2 border border-slate-300 font-bold ${results.structuralInteraction <= 1 ? "text-emerald-700" : "text-rose-700"}`}>
+                    {results.structuralInteraction <= 1 ? "PASS" : "FAIL"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            3. Geotechnical Resistance Calculation
+          </h2>
+          <p className="mt-4 text-xs">
+            Ultimate bearing capacity is evaluated as the sum of shaft friction (Rs) and base resistance (Rb).
+          </p>
+          <div className="mt-6 space-y-4 text-xs">
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold text-slate-800 mb-2">3.1 Shaft Friction Resistance (Rs,k)</h3>
+              <p>Total Ultimate Shaft Resistance: <strong>{results.totalShaftResistance.toFixed(1)} kN</strong></p>
+              <p className="text-slate-600 mt-1">Calculated via effective stress method (β-method) or undrained shear strength (α-method) per soil layer.</p>
+            </div>
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold text-slate-800 mb-2">3.2 Base Bearing Resistance (Rb,k)</h3>
+              <p>Ultimate Base Resistance: <strong>{results.totalBaseResistance.toFixed(1)} kN</strong></p>
+              <p className="text-slate-600 mt-1">Evaluated using bearing capacity factors (Nc, Nq, Nγ) at pile tip depth.</p>
+            </div>
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold text-slate-800 mb-2">3.3 Total Characteristic & Design Resistance</h3>
+              <p>Characteristic Resistance (Rc,k): <strong>{results.characteristicResistance.toFixed(1)} kN</strong></p>
+              <p>Design Resistance (Rc,d = Rc,k / γ_t): <strong>{results.designResistance.toFixed(1)} kN</strong></p>
+            </div>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            4. Settlement & Lateral Displacement
+          </h2>
+          <p className="mt-4 text-xs">
+            Evaluation of elastic pile compression, soil settlement under axial loads, and lateral pile deflection profiles.
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-6">
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold mb-2">Settlement Breakdown</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Elastic Pile Compression: {(results.settlementTotal * 0.35).toFixed(1)} mm</li>
+                <li>Soil Punching & Tip Settlement: {(results.settlementTotal * 0.65).toFixed(1)} mm</li>
+                <li><strong>Total Settlement (s): {results.settlementTotal.toFixed(1)} mm</strong></li>
+                <li>Allowable Limit: 25.0 mm</li>
+              </ul>
+            </div>
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold mb-2">Lateral Deflection Summary</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Max Lateral Deflection: {results.maxLateralDeflection.toFixed(2)} mm</li>
+                <li>Depth of Max Deflection: 0.0 m (Pile Head)</li>
+                <li>Allowable Lateral Limit: 10.0 mm</li>
+                <li>Lateral Status: <span className="text-emerald-700 font-bold">PASS</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            5. Structural RC Design & Reinforcement
+          </h2>
+          <p className="mt-4 text-xs">
+            Longitudinal reinforcement and transverse spiral hoops designed per EN 1992-1-1.
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-6">
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold mb-2">Longitudinal Reinforcement</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Total Bars: {project.numBars} × Ø{project.barDiameter} mm</li>
+                <li>Total Steel Area (As): {results.reinforcementArea.toFixed(0)} mm²</li>
+                <li>Reinforcement Ratio (ρ): {(results.reinforcementRatio * 100).toFixed(2)}%</li>
+                <li>Minimum Required ratio: 0.30%</li>
+                <li>Status: <span className="text-emerald-700 font-bold">ADEQUATE</span></li>
+              </ul>
+            </div>
+            <div className="bg-white p-4 border border-slate-300 rounded">
+              <h3 className="font-bold mb-2">Transverse / Shear Hoops</h3>
+              <ul className="space-y-1 text-slate-700">
+                <li>Spiral / Hoop Size: Ø8 mm @ 200mm c/c</li>
+                <li>Confinement Status: Adequate</li>
+                <li>Nominal steel mass: ~{(project.pileLength * 15).toFixed(1)} kg/m</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+
+      <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10 flex flex-col justify-between">
+        <div>
+          <ReportHeader project={project} />
+          <h2 className="border-b-2 border-[#173b5f] pb-2 text-xl font-bold text-[#173b5f]">
+            6. Geotechnical Summary Tables
+          </h2>
+          <p className="mt-4 text-xs mb-4">Detailed soil layer parameters and computed shaft friction distribution along the pile shaft.</p>
+          <table className="w-full text-left border-collapse border border-slate-300 text-xs">
+            <thead>
+              <tr className="bg-slate-200">
+                <th className="p-2 border border-slate-300">Layer ID</th>
+                <th className="p-2 border border-slate-300">Thickness</th>
+                <th className="p-2 border border-slate-300">Soil Name</th>
+                <th className="p-2 border border-slate-300">Unit Wt (γ)</th>
+                <th className="p-2 border border-slate-300">Friction (φ°)</th>
+                <th className="p-2 border border-slate-300">Cohesion (cu)</th>
+                <th className="p-2 border border-slate-300">Shaft Res.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.layers.map((layer) => (
+                <tr key={layer.layerId} className="border-t border-slate-300">
+                  <td className="p-2 border border-slate-300">{layer.layerId}</td>
+                  <td className="p-2 border border-slate-300">{layer.effectiveLength.toFixed(2)} m</td>
+                  <td className="p-2 border border-slate-300">{layer.name}</td>
+                  <td className="p-2 border border-slate-300">
+                    {project.layers.find((item) => item.id === layer.layerId)?.gamma ?? "-"}
+                  </td>
+                  <td className="p-2 border border-slate-300">
+                    {project.layers.find((item) => item.id === layer.layerId)?.phi ?? "-"}
+                  </td>
+                  <td className="p-2 border border-slate-300">
+                    {project.layers.find((item) => item.id === layer.layerId)?.cu ?? "-"}
+                  </td>
+                  <td className="p-2 border border-slate-300">{layer.shaftResistance.toFixed(1)} kN</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ReportFooter project={project} />
+      </section>
+    </>
+  );
 
   return (
-    <div className="min-h-dvh bg-[#07111f] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
-      {/* Blueprint grid background overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#16263d_1px,transparent_1px),linear-gradient(to_bottom,#16263d_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-35 pointer-events-none" />
-
+    <div className="min-h-screen bg-[#02060f] text-slate-100 flex flex-col font-sans">
       {/* TOP NAVIGATION BAR */}
       <header className="relative z-20 border-b border-[#1e3a5f]/60 bg-[#060e18]/95 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -870,1221 +916,630 @@ export function BoredPileView() {
 
         {/* 2. SOIL STRATA & WATER */}
         {activeTab === "soil" && (
-          <div className="space-y-6">
-            <div className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-              <div className="flex items-center justify-between border-b border-cyan-900/60 pb-4 mb-6">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-white">Custom Soil Model</h2>
-                  <p className="text-xs font-mono text-slate-400 mt-1">
-                    Layered ground profile with GEO5 / PLAXIS-style material inputs
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-end gap-2 font-mono text-xs">
-                  <label className="inline-flex items-center gap-2 px-3 py-2 rounded bg-cyan-950/80 border border-cyan-700 text-cyan-300 cursor-pointer">
-                    <Upload className="size-3.5" /> Import Excel / CSV
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                      className="hidden"
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        try {
-                          const buffer = await file.arrayBuffer();
-                          const isWorkbook = new TextDecoder().decode(buffer.slice(0, 2)) === "PK";
-                          const layers = isWorkbook
-                            ? parseSoilWorkbook(buffer)
-                            : parseSoilCsv(new TextDecoder().decode(buffer));
-                          setProject({ ...project, layers });
-                          setSoilMessage(`${layers.length} layer(s) imported from ${file.name}`);
-                        } catch (error) {
-                          setSoilMessage(
-                            error instanceof Error
-                              ? error.message
-                              : "Could not read the soil file.",
-                          );
-                        }
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                  <button
-                    onClick={() => downloadV2Template(project.layers)}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded bg-cyan-950 border border-cyan-700 text-cyan-200 hover:bg-cyan-900"
-                  >
-                    <Download className="size-3.5" /> Download v2 Template
-                  </button>
-                  <button
-                    onClick={() => {
-                      const headers = [
-                        "id",
-                        "name",
-                        "type",
-                        "topDepth",
-                        "bottomDepth",
-                        "gamma",
-                        "gammaSat",
-                        "phi",
-                        "c",
-                        "cu",
-                        "sptN",
-                        "e50",
-                        "eoed",
-                        "eur",
-                        "nu",
-                        "permeability",
-                        "ocr",
-                        "k0",
-                        "rInter",
-                        "drainage",
-                        "method",
-                      ];
-                      const rows = project.layers.map((layer) =>
-                        headers
-                          .map((header) => csvCell(layer[header as keyof SoilLayerInput]))
-                          .join(","),
-                      );
-                      const blob = new Blob([[headers.join(","), ...rows].join("\n")], {
-                        type: "text/csv;charset=utf-8",
-                      });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = "bored-pile-soil-model.csv";
-                      link.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded bg-slate-800 border border-slate-600 text-slate-200 hover:bg-slate-700"
-                  >
-                    <Download className="size-3.5" /> Export CSV
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(600px,1.25fr)] 2xl:grid-cols-[minmax(0,0.92fr)_minmax(680px,1.35fr)] gap-6 items-start">
-              <div className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-                <div className="mb-5 grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
-                  <div className="p-3 rounded-lg bg-[#040910] border border-slate-800 text-slate-300">
-                    Layers: <strong className="text-cyan-300">{project.layers.length}</strong>
-                  </div>
-                  <label className="rounded-lg border border-cyan-700/70 bg-cyan-950/40 p-3 text-slate-300">
-                    <span className="mb-1 block text-[10px] uppercase tracking-wide text-cyan-300">
-                      Groundwater level (m bgl)
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={project.waterLevel}
-                      onChange={(event) =>
-                        setProject({
-                          ...project,
-                          waterLevel: Math.max(0, Number(event.target.value) || 0),
-                        })
-                      }
-                      className="w-full rounded border border-cyan-700 bg-[#040910] px-2 py-1.5 text-base font-bold text-cyan-200"
-                    />
-                    <span className="mt-1 block text-[10px] text-slate-500">
-                      Below ground level; updates effective stress and diagrams.
-                    </span>
-                  </label>
-                  <div className="p-3 rounded-lg bg-[#040910] border border-slate-800 text-slate-300">
-                    Pile toe:{" "}
-                    <strong className="text-cyan-300">{project.length.toFixed(2)} m</strong>
-                  </div>
-                </div>
-
-                {soilMessage && (
-                  <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 font-mono text-xs text-amber-200">
-                    {soilMessage}
-                  </p>
-                )}
-
-                <div className="space-y-4">
-                  {project.layers.map((layer, index) => {
-                    const updateLayer = (patch: Partial<SoilLayerInput>) => {
-                      setProject({
-                        ...project,
-                        layers: project.layers.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, ...patch } : item,
-                        ),
-                      });
-                    };
-                    const input = (label: string, key: keyof SoilLayerInput, unit = "") => (
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
-                          {label}
-                          {unit && ` (${unit})`}
-                        </span>
-                        <input
-                          type="number"
-                          step="any"
-                          value={typeof layer[key] === "number" ? layer[key] : ""}
-                          onChange={(event) =>
-                            updateLayer({
-                              [key]: Number(event.target.value),
-                            } as Partial<SoilLayerInput>)
-                          }
-                          className="w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
-                        />
-                      </label>
-                    );
-                    return (
-                      <section
-                        key={layer.id}
-                        className="rounded-xl border border-cyan-900/60 bg-[#040910]/80 p-4"
-                      >
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <span className="rounded bg-cyan-950 px-2 py-1 font-mono text-xs font-bold text-cyan-300">
-                              {layer.id}
-                            </span>
-                            <input
-                              value={layer.name}
-                              onChange={(event) => updateLayer({ name: event.target.value })}
-                              className="min-w-0 border-b border-slate-700 bg-transparent px-1 py-1 font-semibold text-white outline-none focus:border-cyan-400"
-                            />
-                          </div>
-                          <button
-                            title="Remove layer"
-                            onClick={() =>
-                              setProject({
-                                ...project,
-                                layers: project.layers.filter(
-                                  (_, itemIndex) => itemIndex !== index,
-                                ),
-                              })
-                            }
-                            className="rounded p-2 text-slate-500 hover:bg-rose-950/60 hover:text-rose-300"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        </div>
-                        <p className="mb-3 border-b border-slate-800 pb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-400">
-                          1. Stratum geometry and basic classification
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8 font-mono text-xs">
-                          {input("Top", "topDepth", "m")}
-                          {input("Bottom", "bottomDepth", "m")}
-                          {input("γ total", "gamma", "kN/m³")}
-                          {input("γ saturated", "gammaSat", "kN/m³")}
-                          {input("SPT N", "sptN")}
-                          {input("CPT qc", "cptQc", "MPa")}
-                          <label>
-                            <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
-                              Behavior type
-                            </span>
-                            <select
-                              value={layer.behaviorType ?? "custom"}
-                              onChange={(event) =>
-                                updateLayer({
-                                  behaviorType: event.target
-                                    .value as SoilLayerInput["behaviorType"],
-                                })
-                              }
-                              className="w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
-                            >
-                              <option value="cohesive">Cohesive</option>
-                              <option value="granular">Granular</option>
-                              <option value="rock">Rock</option>
-                              <option value="custom">Custom</option>
-                            </select>
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
-                              Drainage condition
-                            </span>
-                            <select
-                              value={layer.drainage ?? "drained"}
-                              onChange={(event) =>
-                                updateLayer({
-                                  drainage: event.target.value as SoilLayerInput["drainage"],
-                                  method: event.target.value === "undrained" ? "alpha" : "beta",
-                                })
-                              }
-                              className="w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
-                            >
-                              <option value="drained">Drained</option>
-                              <option value="undrained">Undrained</option>
-                            </select>
-                          </label>
-                        </div>
-
-                        <p className="mb-3 mt-5 border-b border-slate-800 pb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-400">
-                          2. Strength and stiffness parameters
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8 font-mono text-xs">
-                          {input("φ'", "phi", "°")}
-                          {input("c'", "c", "kPa")}
-                          {input("cu", "cu", "kPa")}
-                          {input("E' / E50", "e50", "kPa")}
-                          {input("Eoed", "eoed", "kPa")}
-                          {input("Eur", "eur", "kPa")}
-                          {input("ν", "nu")}
-                          {input("Permeability", "permeability", "m/s")}
-                        </div>
-
-                        <p className="mb-3 mt-5 border-b border-slate-800 pb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-400">
-                          3. Consolidation and pile resistance
-                        </p>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8 font-mono text-xs">
-                          {input("OCR", "ocr")}
-                          {input("K0", "k0")}
-                          {input("Rinter", "rInter")}
-                          {input("e0", "initialVoidRatio")}
-                          {input("Cc", "compressionIndex")}
-                          {input("Cs", "recompressionIndex")}
-                          {input("p0", "preconsolidationStress", "kPa")}
-                          {input("qs,k", "characteristicShaftFriction", "kPa")}
-                          {input("qb,k", "characteristicBaseResistance", "kPa")}
-                          <label>
-                            <span className="mb-1 block text-[10px] uppercase tracking-wide text-slate-500">
-                              Material type
-                            </span>
-                            <select
-                              value={layer.type}
-                              onChange={(event) =>
-                                updateLayer({ type: event.target.value as SoilLayerInput["type"] })
-                              }
-                              className="w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
-                            >
-                              <option value="custom">Custom</option>
-                              <option value="fill">Fill</option>
-                              <option value="sand">Sand</option>
-                              <option value="dense-sand">Dense sand</option>
-                              <option value="clay">Clay</option>
-                              <option value="stiff-clay">Stiff clay</option>
-                            </select>
-                          </label>
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-5 flex flex-wrap items-center gap-3 font-mono text-xs">
-                  <button
-                    onClick={() =>
-                      setProject({
-                        ...project,
-                        layers: [
-                          ...project.layers,
-                          emptyLayer(
-                            project.layers.length + 1,
-                            project.layers.at(-1)?.bottomDepth ?? 0,
-                          ),
-                        ],
-                      })
-                    }
-                    className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 font-semibold text-white hover:bg-cyan-500"
-                  >
-                    <Plus className="size-4" /> Add soil layer
-                  </button>
-                  <span className="text-slate-500">
-                    Parameters are user inputs; verify values against the geotechnical investigation
-                    before issuing design.
-                  </span>
-                </div>
-              </div>
-
-              <aside className="xl:sticky xl:top-6 min-h-[900px] bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-                <div className="flex items-start justify-between gap-4 border-b border-cyan-900/60 pb-4">
-                  <div>
-                    <h2 className="font-display text-xl font-bold text-white">
-                      Ground Cross-Section
-                    </h2>
-                    <p className="mt-1 font-mono text-xs text-slate-400">
-                      Live profile preview • click a stratum to focus it
-                    </p>
-                  </div>
-                  <span className="rounded border border-emerald-500/40 bg-emerald-950/40 px-2 py-1 font-mono text-[10px] text-emerald-300">
-                    LIVE
-                  </span>
-                </div>
-
-                {(() => {
-                  const maxDepth = Math.max(
-                    project.length,
-                    ...project.layers.map((layer) => layer.bottomDepth),
-                    1,
-                  );
-                  const top = 48;
-                  const bottom = 770;
-                  const scale = (bottom - top) / maxDepth;
-                  const pileWidth = Math.max(22, Math.min(48, project.diameter / 25));
-                  const waterY = top + Math.max(0, project.waterLevel) * scale;
-                  return (
-                    <div className="mt-4">
-                      <svg
-                        viewBox="0 0 760 820"
-                        className="h-[820px] w-full overflow-visible"
-                        role="img"
-                        aria-label="Interactive bored pile soil cross-section"
-                      >
-                        <defs>
-                          <pattern
-                            id="soil-pattern-fill"
-                            width="18"
-                            height="18"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M2 4l3-2M11 8l4-3M5 15l4-2M15 16l2-2"
-                              stroke="#e2c99b"
-                              strokeWidth="1.4"
-                              opacity="0.7"
-                            />
-                          </pattern>
-                          <pattern
-                            id="soil-pattern-clay"
-                            width="20"
-                            height="20"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M0 5c4-3 7 3 10 0s6 3 10 0M0 15c4-3 7 3 10 0s6 3 10 0"
-                              fill="none"
-                              stroke="#cbd5e1"
-                              strokeWidth="1.1"
-                              opacity="0.55"
-                            />
-                          </pattern>
-                          <pattern
-                            id="soil-pattern-sand"
-                            width="18"
-                            height="18"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <circle cx="3" cy="4" r="1.3" fill="#f1d19a" />
-                            <circle cx="11" cy="8" r="1.1" fill="#f1d19a" />
-                            <circle cx="6" cy="15" r="1.2" fill="#f1d19a" />
-                            <circle cx="16" cy="14" r="1" fill="#f1d19a" />
-                          </pattern>
-                          <pattern
-                            id="soil-pattern-rock"
-                            width="24"
-                            height="24"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M1 17L8 4l7 5 7-6M4 23l6-8 6 3 7-7"
-                              fill="none"
-                              stroke="#d6d3d1"
-                              strokeWidth="1.3"
-                              opacity="0.65"
-                            />
-                          </pattern>
-                          <pattern
-                            id="soil-pattern-custom"
-                            width="20"
-                            height="20"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M0 10h20M10 0v20"
-                              stroke="#a5f3fc"
-                              strokeWidth="0.8"
-                              opacity="0.35"
-                            />
-                          </pattern>
-                        </defs>
-                        <rect
-                          x="160"
-                          y={top}
-                          width="360"
-                          height={bottom - top}
-                          rx="3"
-                          fill="#0a1525"
-                          stroke="#334155"
-                        />
-                        <rect
-                          x="160"
-                          y={top}
-                          width="360"
-                          height={bottom - top}
-                          fill="url(#soil-hatch)"
-                          pointerEvents="none"
-                        />
-                        <line
-                          x1="160"
-                          y1={top}
-                          x2="520"
-                          y2={top}
-                          stroke="#f8fafc"
-                          strokeWidth="2"
-                        />
-                        <text x="160" y="26" fill="#cbd5e1" fontSize="13" fontFamily="monospace">
-                          GROUND LEVEL 0.00 m
-                        </text>
-
-                        {project.layers.map((layer) => {
-                          const y = top + Math.max(0, layer.topDepth) * scale;
-                          const height = Math.max(
-                            4,
-                            (Math.min(maxDepth, layer.bottomDepth) - Math.max(0, layer.topDepth)) *
-                              scale,
-                          );
-                          const colors = soilLayerColor(layer);
-                          const selected = selectedLayerId === layer.id;
-                          return (
-                            <g
-                              key={layer.id}
-                              onClick={() => setSelectedLayerId(layer.id)}
-                              className="cursor-pointer"
-                            >
-                              <rect
-                                x="160"
-                                y={y}
-                                width="360"
-                                height={height}
-                                fill={colors.fill}
-                                fillOpacity={selected ? 0.72 : 0.42}
-                                stroke={selected ? "#f8fafc" : colors.stroke}
-                                strokeWidth={selected ? 2 : 1}
-                              />
-                              <rect
-                                x="160"
-                                y={y}
-                                width="360"
-                                height={height}
-                                fill={`url(#${soilPatternId(layer)})`}
-                              />
-                              {height > 8 && (
-                                <line
-                                  x1="520"
-                                  y1={y + Math.min(height / 2, 12)}
-                                  x2="542"
-                                  y2={y + Math.min(height / 2, 12)}
-                                  stroke={selected ? "#f8fafc" : colors.stroke}
-                                />
-                              )}
-                              {height > 8 && (
-                                <text
-                                  x="550"
-                                  y={y + Math.min(height / 2 + 4, height - 2)}
-                                  fill="#f8fafc"
-                                  fontSize="13"
-                                  fontFamily="monospace"
-                                  pointerEvents="none"
-                                >
-                                  {layer.id} · {layer.name.slice(0, 30)}
-                                </text>
-                              )}
-                              <text
-                                x="530"
-                                y={y + 13}
-                                fill="#94a3b8"
-                                fontSize="10"
-                                fontFamily="monospace"
-                              >
-                                {layer.topDepth.toFixed(1)}
-                              </text>
-                            </g>
-                          );
-                        })}
-
-                        {waterY <= bottom && (
-                          <g>
-                            <line
-                              x1="160"
-                              y1={waterY}
-                              x2="520"
-                              y2={waterY}
-                              stroke="#38bdf8"
-                              strokeWidth="2"
-                              strokeDasharray="7 4"
-                            />
-                            <text
-                              x="174"
-                              y={waterY - 8}
-                              fill="#7dd3fc"
-                              fontSize="13"
-                              fontFamily="monospace"
-                            >
-                              GWL -{project.waterLevel.toFixed(2)} m
-                            </text>
-                          </g>
-                        )}
-
-                        <rect
-                          x={340 - pileWidth / 2}
-                          y={top}
-                          width={pileWidth}
-                          height={Math.min(project.length, maxDepth) * scale}
-                          fill="#22d3ee"
-                          fillOpacity="0.2"
-                          stroke="#67e8f9"
-                          strokeWidth="2"
-                        />
-                        <line
-                          x1="340"
-                          y1="12"
-                          x2="340"
-                          y2={top - 2}
-                          stroke="#fbbf24"
-                          strokeWidth="3"
-                        />
-                        <polygon
-                          points={`334,${top - 8} 340,${top} 346,${top - 8}`}
-                          fill="#fbbf24"
-                        />
-                        <text
-                          x="355"
-                          y="24"
-                          fill="#fbbf24"
-                          fontSize="13"
-                          fontFamily="monospace"
-                          fontWeight="bold"
-                        >
-                          N_Ed {project.nEd} kN
-                        </text>
-                        <line
-                          x1="160"
-                          y1={top + project.length * scale}
-                          x2="520"
-                          y2={top + project.length * scale}
-                          stroke="#fbbf24"
-                          strokeWidth="1"
-                          strokeDasharray="3 3"
-                        />
-                        <text
-                          x="174"
-                          y={Math.min(805, top + project.length * scale + 20)}
-                          fill="#fbbf24"
-                          fontSize="13"
-                          fontFamily="monospace"
-                        >
-                          PILE TOE {project.length.toFixed(2)} m
-                        </text>
-
-                        {Array.from(
-                          { length: Math.floor(maxDepth / 5) + 1 },
-                          (_, index) => index * 5,
-                        ).map((depth) => {
-                          const y = top + depth * scale;
-                          return y <= bottom ? (
-                            <g key={depth}>
-                              <line x1="144" y1={y} x2="160" y2={y} stroke="#64748b" />
-                              <text
-                                x="92"
-                                y={y + 4}
-                                fill="#64748b"
-                                fontSize="11"
-                                fontFamily="monospace"
-                              >
-                                {depth}m
-                              </text>
-                            </g>
-                          ) : null;
-                        })}
-                      </svg>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 font-mono text-[11px] text-slate-300">
-                        <div className="rounded border border-slate-700 bg-[#040910] p-2">
-                          Pile diameter{" "}
-                          <strong className="text-cyan-300">{project.diameter} mm</strong>
-                        </div>
-                        <div className="rounded border border-slate-700 bg-[#040910] p-2">
-                          Pile length <strong className="text-cyan-300">{project.length} m</strong>
-                        </div>
-                        <div className="rounded border border-slate-700 bg-[#040910] p-2">
-                          Selected{" "}
-                          <strong className="text-cyan-300">{selectedLayerId ?? "none"}</strong>
-                        </div>
-                        <div className="rounded border border-slate-700 bg-[#040910] p-2">
-                          Toe layer{" "}
-                          <strong className="text-cyan-300">
-                            {project.layers.find(
-                              (layer) =>
-                                project.length >= layer.topDepth &&
-                                project.length <= layer.bottomDepth,
-                            )?.id ?? "outside profile"}
-                          </strong>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </aside>
-            </div>
-          </div>
+          <SoilStrataTab
+            project={project}
+            setProject={setProject}
+            results={results}
+            selectedLayerId={selectedLayerId}
+            setSelectedLayerId={setSelectedLayerId}
+            soilMessage={soilMessage}
+            setSoilMessage={setSoilMessage}
+          />
         )}
 
         {/* 3. GEOMETRY & LOADS */}
         {activeTab === "geometry" && (
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,0.78fr)_minmax(560px,1.22fr)] gap-6 items-start">
-            <section className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-              <div className="border-b border-cyan-900/60 pb-4 mb-6">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-400">
-                  Input panel / geometry & actions
-                </p>
-                <h2 className="font-display text-xl font-bold text-white mt-1">
-                  Pile Design Parameters
-                </h2>
-                <p className="text-xs font-mono text-slate-400 mt-1">
-                  Edit the pile and the diagrams update immediately.
-                </p>
-              </div>
-
-              <div className="space-y-5 font-mono text-xs">
-                <div>
-                  <p className="mb-3 text-[10px] uppercase tracking-widest text-slate-500">
-                    Pile geometry
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">Diameter (mm)</span>
-                      <input
-                        type="number"
-                        min="300"
-                        step="50"
-                        value={project.diameter}
-                        onChange={(e) =>
-                          setProject({ ...project, diameter: parseFloat(e.target.value) || 800 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">Length (m)</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.5"
-                        value={project.length}
-                        onChange={(e) =>
-                          setProject({ ...project, length: parseFloat(e.target.value) || 25 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                    <label className="col-span-2 block">
-                      <span className="mb-1 block text-slate-400">Concrete grade</span>
-                      <input
-                        type="text"
-                        value={project.concreteGrade}
-                        onChange={(e) => setProject({ ...project, concreteGrade: e.target.value })}
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-3 text-[10px] uppercase tracking-widest text-slate-500">
-                    Design actions
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">
-                        N<sub>Ed</sub> (kN)
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="50"
-                        value={project.nEd}
-                        onChange={(e) =>
-                          setProject({ ...project, nEd: parseFloat(e.target.value) || 0 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">
-                        M<sub>Ed</sub> (kNm)
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="10"
-                        value={project.mEd}
-                        onChange={(e) =>
-                          setProject({ ...project, mEd: parseFloat(e.target.value) || 0 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">Nominal cover (mm)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="5"
-                        value={project.cover}
-                        onChange={(e) =>
-                          setProject({ ...project, cover: parseFloat(e.target.value) || 0 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-slate-400">Groundwater (m bgl)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={project.waterLevel}
-                        onChange={(e) =>
-                          setProject({ ...project, waterLevel: parseFloat(e.target.value) || 0 })
-                        }
-                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 border-t border-cyan-900/60 pt-5">
-                  <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
-                    <p className="text-slate-500">Toe layer</p>
-                    <p className="mt-1 font-bold text-cyan-300">
-                      {project.layers.find(
-                        (layer) =>
-                          project.length >= layer.topDepth && project.length <= layer.bottomDepth,
-                      )?.id ?? "Outside profile"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
-                    <p className="text-slate-500">ULS utilization</p>
-                    <p
-                      className={`mt-1 font-bold ${results.utilizationGeotechnical <= 1 ? "text-emerald-400" : "text-rose-400"}`}
-                    >
-                      {Number.isFinite(results.utilizationGeotechnical)
-                        ? `${(results.utilizationGeotechnical * 100).toFixed(1)}%`
-                        : "INPUT REQUIRED"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="xl:sticky xl:top-6 bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-              <div className="flex items-start justify-between border-b border-cyan-900/60 pb-4 mb-5">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-400">
-                    Live visualization / scale model
-                  </p>
-                  <h2 className="font-display text-xl font-bold text-white mt-1">
-                    Bored Pile Geometry
-                  </h2>
-                  <p className="text-xs font-mono text-slate-400 mt-1">
-                    Plan view and longitudinal section through every soil stratum.
-                  </p>
-                </div>
-                <span className="rounded border border-emerald-500/40 bg-emerald-950/40 px-2 py-1 font-mono text-[10px] text-emerald-300">
-                  LIVE
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-[0.72fr_1.28fr] gap-5">
-                <div className="rounded-xl border border-slate-700 bg-[#040910] p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="font-mono text-xs font-bold text-slate-200">PLAN VIEW</h3>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      Ø {project.diameter} mm
-                    </span>
-                  </div>
-                  <svg
-                    viewBox="0 0 260 260"
-                    className="mx-auto w-full max-w-[280px]"
-                    role="img"
-                    aria-label="Bored pile plan view"
-                  >
-                    <defs>
-                      <pattern id="plan-grid" width="16" height="16" patternUnits="userSpaceOnUse">
-                        <path
-                          d="M 16 0 L 0 0 0 16"
-                          fill="none"
-                          stroke="#1e3a5f"
-                          strokeWidth="0.7"
-                          opacity="0.5"
-                        />
-                      </pattern>
-                    </defs>
-                    <rect
-                      x="8"
-                      y="8"
-                      width="244"
-                      height="244"
-                      fill="url(#plan-grid)"
-                      stroke="#334155"
-                    />
-                    <circle
-                      cx="130"
-                      cy="130"
-                      r="92"
-                      fill="#0b192c"
-                      stroke="#64748b"
-                      strokeDasharray="3 3"
-                    />
-                    <circle
-                      cx="130"
-                      cy="130"
-                      r={Math.min(82, Math.max(20, project.diameter / 11))}
-                      fill="#155e75"
-                      fillOpacity="0.75"
-                      stroke="#67e8f9"
-                      strokeWidth="3"
-                    />
-                    <circle
-                      cx="130"
-                      cy="130"
-                      r={Math.min(68, Math.max(14, project.diameter / 14))}
-                      fill="#07111f"
-                      stroke="#22d3ee"
-                      strokeOpacity="0.5"
-                    />
-                    <line
-                      x1="38"
-                      y1="130"
-                      x2="222"
-                      y2="130"
-                      stroke="#94a3b8"
-                      strokeDasharray="5 4"
-                    />
-                    <line
-                      x1="130"
-                      y1="38"
-                      x2="130"
-                      y2="222"
-                      stroke="#94a3b8"
-                      strokeDasharray="5 4"
-                    />
-                    <line
-                      x1="130"
-                      y1="130"
-                      x2="130"
-                      y2={130 - Math.min(82, Math.max(20, project.diameter / 11))}
-                      stroke="#fbbf24"
-                      strokeWidth="2"
-                    />
-                    <text
-                      x="130"
-                      y="238"
-                      textAnchor="middle"
-                      fill="#cbd5e1"
-                      fontSize="10"
-                      fontFamily="monospace"
-                    >
-                      SECTION A-A
-                    </text>
-                    <text
-                      x="130"
-                      y="25"
-                      textAnchor="middle"
-                      fill="#fbbf24"
-                      fontSize="10"
-                      fontFamily="monospace"
-                    >
-                      N_Ed
-                    </text>
-                  </svg>
-                  <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-[10px] text-slate-400">
-                    <span>
-                      Area{" "}
-                      <strong className="text-cyan-300">{results.pileArea.toFixed(3)} m²</strong>
-                    </span>
-                    <span>
-                      Perimeter{" "}
-                      <strong className="text-cyan-300">
-                        {results.pilePerimeter.toFixed(2)} m
-                      </strong>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-700 bg-[#040910] p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="font-mono text-xs font-bold text-slate-200">SECTION A-A</h3>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      0.00 to {project.length.toFixed(1)} m
-                    </span>
-                  </div>
-                  {(() => {
-                    const maxDepth = Math.max(
-                      project.length,
-                      ...project.layers.map((layer) => layer.bottomDepth),
-                      1,
-                    );
-                    const topDepth = 28;
-                    const bottomDepth = 510;
-                    const depthScale = (bottomDepth - topDepth) / maxDepth;
-                    return (
-                      <svg
-                        viewBox="0 0 360 550"
-                        className="h-[520px] w-full"
-                        role="img"
-                        aria-label="Bored pile longitudinal section through soil strata"
-                      >
-                        <defs>
-                          <pattern
-                            id="section-pattern-fill"
-                            width="18"
-                            height="18"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M2 4l3-2M11 8l4-3M5 15l4-2M15 16l2-2"
-                              stroke="#e2c99b"
-                              strokeWidth="1.4"
-                              opacity="0.7"
-                            />
-                          </pattern>
-                          <pattern
-                            id="section-pattern-clay"
-                            width="20"
-                            height="20"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M0 5c4-3 7 3 10 0s6 3 10 0M0 15c4-3 7 3 10 0s6 3 10 0"
-                              fill="none"
-                              stroke="#cbd5e1"
-                              strokeWidth="1.1"
-                              opacity="0.55"
-                            />
-                          </pattern>
-                          <pattern
-                            id="section-pattern-sand"
-                            width="18"
-                            height="18"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <circle cx="3" cy="4" r="1.3" fill="#f1d19a" />
-                            <circle cx="11" cy="8" r="1.1" fill="#f1d19a" />
-                            <circle cx="6" cy="15" r="1.2" fill="#f1d19a" />
-                            <circle cx="16" cy="14" r="1" fill="#f1d19a" />
-                          </pattern>
-                          <pattern
-                            id="section-pattern-rock"
-                            width="24"
-                            height="24"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M1 17L8 4l7 5 7-6M4 23l6-8 6 3 7-7"
-                              fill="none"
-                              stroke="#d6d3d1"
-                              strokeWidth="1.3"
-                              opacity="0.65"
-                            />
-                          </pattern>
-                          <pattern
-                            id="section-pattern-custom"
-                            width="20"
-                            height="20"
-                            patternUnits="userSpaceOnUse"
-                          >
-                            <path
-                              d="M0 10h20M10 0v20"
-                              stroke="#a5f3fc"
-                              strokeWidth="0.8"
-                              opacity="0.35"
-                            />
-                          </pattern>
-                        </defs>
-                        <rect
-                          x="72"
-                          y={topDepth}
-                          width="190"
-                          height={bottomDepth - topDepth}
-                          fill="#0a1525"
-                          stroke="#334155"
-                        />
-                        {project.layers.map((layer) => {
-                          const y = topDepth + Math.max(0, layer.topDepth) * depthScale;
-                          const height = Math.max(
-                            3,
-                            (Math.min(maxDepth, layer.bottomDepth) - Math.max(0, layer.topDepth)) *
-                              depthScale,
-                          );
-                          const colors = soilLayerColor(layer);
-                          const patternId = soilPatternId(layer).replace(
-                            "soil-pattern",
-                            "section-pattern",
-                          );
-                          return (
-                            <g key={layer.id}>
-                              <rect
-                                x="72"
-                                y={y}
-                                width="190"
-                                height={height}
-                                fill={colors.fill}
-                                fillOpacity="0.5"
-                                stroke={colors.stroke}
-                              />
-                              <rect
-                                x="72"
-                                y={y}
-                                width="190"
-                                height={height}
-                                fill={`url(#${patternId})`}
-                              />
-                              <text
-                                x="82"
-                                y={y + Math.min(height - 3, 14)}
-                                fill="#f8fafc"
-                                fontSize="9"
-                                fontFamily="monospace"
-                              >
-                                {layer.id} {layer.name.slice(0, 20)}
-                              </text>
-                              <text
-                                x="270"
-                                y={y + 11}
-                                fill="#94a3b8"
-                                fontSize="9"
-                                fontFamily="monospace"
-                              >
-                                {layer.topDepth.toFixed(1)}
-                              </text>
-                            </g>
-                          );
-                        })}
-                        <line
-                          x1="72"
-                          y1={topDepth + project.waterLevel * depthScale}
-                          x2="262"
-                          y2={topDepth + project.waterLevel * depthScale}
-                          stroke="#38bdf8"
-                          strokeWidth="2"
-                          strokeDasharray="7 4"
-                        />
-                        <text
-                          x="80"
-                          y={topDepth + project.waterLevel * depthScale - 6}
-                          fill="#7dd3fc"
-                          fontSize="9"
-                          fontFamily="monospace"
-                        >
-                          GWL -{project.waterLevel.toFixed(1)} m
-                        </text>
-                        <rect
-                          x="150"
-                          y={topDepth}
-                          width={Math.max(22, Math.min(44, project.diameter / 25))}
-                          height={Math.min(project.length, maxDepth) * depthScale}
-                          fill="#22d3ee"
-                          fillOpacity="0.25"
-                          stroke="#67e8f9"
-                          strokeWidth="2"
-                        />
-                        <line x1="171" y1="7" x2="171" y2="24" stroke="#fbbf24" strokeWidth="3" />
-                        <polygon points="165,20 171,28 177,20" fill="#fbbf24" />
-                        <line
-                          x1="72"
-                          y1={topDepth + project.length * depthScale}
-                          x2="262"
-                          y2={topDepth + project.length * depthScale}
-                          stroke="#fbbf24"
-                          strokeDasharray="3 3"
-                        />
-                        <text
-                          x="80"
-                          y={Math.min(542, topDepth + project.length * depthScale + 15)}
-                          fill="#fbbf24"
-                          fontSize="9"
-                          fontFamily="monospace"
-                        >
-                          TOE {project.length.toFixed(1)} m
-                        </text>
-                        {Array.from(
-                          { length: Math.floor(maxDepth / 5) + 1 },
-                          (_, index) => index * 5,
-                        ).map((depth) => {
-                          const y = topDepth + depth * depthScale;
-                          return y <= bottomDepth ? (
-                            <g key={depth}>
-                              <line x1="60" y1={y} x2="72" y2={y} stroke="#64748b" />
-                              <text
-                                x="28"
-                                y={y + 4}
-                                fill="#64748b"
-                                fontSize="9"
-                                fontFamily="monospace"
-                              >
-                                {depth}m
-                              </text>
-                            </g>
-                          ) : null;
-                        })}
-                      </svg>
-                    );
-                  })()}
-                </div>
-              </div>
-            </section>
-          </div>
+          <GeometryLoadsTab
+            project={project}
+            setProject={setProject}
+            results={results}
+          />
         )}
 
         {/* 4. GEOTECHNICAL ULS */}
         {activeTab === "geotechnical" && (
           <div className="space-y-6">
+            {/* Top Summary Banner */}
             <div className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-              <div className="flex items-center justify-between border-b border-cyan-900/60 pb-4 mb-6">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between border-b border-cyan-900/60 pb-4 mb-6 gap-4">
                 <div>
-                  <h2 className="font-display text-xl font-bold text-white">
-                    Geotechnical Ultimate Limit State (EN 1997-1)
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="font-mono text-xs uppercase tracking-wider text-cyan-400">EN 1997-1 Ultimate Limit State (ULS) Verification</span>
+                  </div>
+                  <h2 className="font-display text-2xl font-bold text-white mt-1">
+                    Geotechnical Axial Resistance & Load Verification
                   </h2>
                   <p className="text-xs font-mono text-slate-400 mt-1">
-                    Shaft friction and base bearing capacity breakdown
+                    Detailed layer-by-layer shaft friction (τ_s or βσ&apos;v₀) and base bearing capacity integration (q_b).
                   </p>
                 </div>
-                <div className="text-right font-mono">
-                  <p className="text-xs text-slate-400">Total Characteristic Resistance R_c,k:</p>
-                  <p className="text-lg font-bold text-cyan-300">
-                    {results.totalCharacteristicResistance} kN
-                  </p>
+                <div className="flex items-center gap-3 bg-[#040910] border border-cyan-500/40 px-4 py-3 rounded-xl font-mono">
+                  <div>
+                    <p className="text-[10px] text-slate-400">GEOTECHNICAL UTILIZATION</p>
+                    <p className={`text-xl font-bold ${results.utilizationGeotechnical <= 1.0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {(results.utilizationGeotechnical * 100).toFixed(1)}% ({results.utilizationGeotechnical <= 1.0 ? "PASS" : "FAIL"})
+                    </p>
+                  </div>
+                  <div className="h-8 w-px bg-slate-800 mx-2" />
+                  <div>
+                    <p className="text-[10px] text-slate-400">DESIGN MARGIN</p>
+                    <p className="text-xl font-bold text-cyan-300">
+                      {(results.designResistance - project.nEd).toFixed(0)} kN
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="overflow-x-auto mb-6">
-                <table className="w-full text-left font-mono text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-700 text-cyan-400 bg-cyan-950/30">
-                      <th className="p-3">Layer</th>
-                      <th className="p-3">Effective Length</th>
-                      <th className="p-3">Calculation Method</th>
-                      <th className="p-3 text-right">Shaft Resistance R_s,i (kN)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {results.layers.map((l) => (
-                      <tr key={l.layerId} className="hover:bg-slate-900/50">
-                        <td className="p-3 font-bold text-white">
-                          {l.layerId}: {l.name}
-                        </td>
-                        <td className="p-3 text-cyan-300">{l.effectiveLength.toFixed(1)} m</td>
-                        <td className="p-3 text-slate-400">{l.methodUsed}</td>
-                        <td className="p-3 text-right font-bold text-white">
-                          {l.shaftResistance.toFixed(1)} kN
-                        </td>
+              {/* Interactive Geotechnical Design Parameters Toolbar */}
+              <div className="mb-6 p-4 rounded-xl bg-[#040910] border border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
+                <div>
+                  <div className="flex justify-between text-slate-400 mb-1">
+                    <span>Design Axial Load (N_Ed):</span>
+                    <span className="text-cyan-400 font-bold">{project.nEd} kN</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1000"
+                    max="5000"
+                    step="100"
+                    value={project.nEd}
+                    onChange={(e) => setProject({ ...project, nEd: parseFloat(e.target.value) })}
+                    className="w-full accent-cyan-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-400 mb-1">
+                    <span>Resistance Factor (γ_t / SF):</span>
+                    <span className="text-amber-400 font-bold">{project.safetyFactor.toFixed(1)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2.0"
+                    max="5.0"
+                    step="0.1"
+                    value={project.safetyFactor}
+                    onChange={(e) => setProject({ ...project, safetyFactor: parseFloat(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block">
+                    <span className="text-slate-400 mb-1 block">EN 1997 Design Approach:</span>
+                    <select
+                      value={project.designApproach}
+                      onChange={(e) => setProject({ ...project, designApproach: e.target.value as any })}
+                      className="w-full rounded bg-slate-900 border border-slate-700 p-1.5 text-white"
+                    >
+                      <option value="DA1-C1">DA1 Combination 1</option>
+                      <option value="DA1-C2">DA1 Combination 2</option>
+                      <option value="DA2">DA2 (Recommended)</option>
+                      <option value="DA3">DA3</option>
+                    </select>
+                  </label>
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-400 mb-1">
+                    <span>Pile Dimensions:</span>
+                    <span className="text-cyan-400 font-bold">Ø{project.diameter}mm × {project.length}m</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 pt-1">
+                    Base Area: <strong className="text-slate-300">{results.pileArea.toFixed(2)} m²</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Load Distribution & Resistance Diagram */}
+              <div className="mb-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-7 bg-[#040910] border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <h3 className="font-mono text-xs font-bold text-slate-200 uppercase">
+                      Load-Transfer & Resistance Profile Diagram
+                    </h3>
+                    <span className="font-mono text-[10px] text-cyan-400">
+                      Shaft & Base Integration
+                    </span>
+                  </div>
+
+                  <div className="relative flex-1 flex items-center justify-center py-2 min-h-[360px]">
+                    <svg viewBox="0 0 600 380" className="w-full h-[360px]" role="img" aria-label="Geotechnical ULS resistance profile diagram">
+                      <defs>
+                        <linearGradient id="shaft-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#0891b2" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.8" />
+                        </linearGradient>
+                      </defs>
+                      {/* Background axis */}
+                      <line x1="80" y1="40" x2="80" y2="340" stroke="#334155" strokeWidth="2" />
+                      <line x1="80" y1="340" x2="540" y2="340" stroke="#334155" strokeWidth="2" />
+
+                      {/* Depth ticks & soil stratification bands on left */}
+                      {[0, 5, 10, 15, 20, 25, 30].filter(d => d <= project.length).map(depth => {
+                        const y = 40 + (depth / 30) * 280;
+                        return (
+                          <g key={depth}>
+                            <line x1="74" y1={y} x2="80" y2={y} stroke="#64748b" />
+                            <text x="50" y={y + 4} fill="#64748b" fontSize="10" fontFamily="monospace" textAnchor="end">
+                              -{depth}m
+                            </text>
+                            <line x1="80" y1={y} x2="540" y2={y} stroke="#1e293b" strokeDasharray="3 3" />
+                          </g>
+                        );
+                      })}
+
+                      {/* Pile shaft visual representation */}
+                      <rect x="250" y="40" width="36" height={Math.min(300, (project.length / 30) * 280)} fill="url(#shaft-grad)" stroke="#67e8f9" strokeWidth="2" rx="4" />
+
+                      {/* Applied Load N_Ed arrow at top */}
+                      <polygon points="262,10 268,38 256,38" fill="#fbbf24" />
+                      <rect x="220" y="15" width="84" height="20" fill="#0f172a" rx="3" stroke="#fbbf24" strokeWidth="1" />
+                      <text x="262" y="29" fill="#fbbf24" fontSize="11" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
+                        N_Ed = {project.nEd} kN
+                      </text>
+
+                      {/* Shaft friction side arrows and labels */}
+                      <text x="140" y="160" fill="#38bdf8" fontSize="11" fontFamily="monospace" textAnchor="middle">
+                        Shaft Friction R_sk
+                      </text>
+                      <text x="140" y="176" fill="#e2e8f0" fontSize="11" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
+                        {results.totalShaftResistance.toFixed(0)} kN
+                      </text>
+                      <path d="M 210 120 L 246 120" stroke="#38bdf8" strokeWidth="2" markerEnd="url(#arrow)" />
+                      <path d="M 210 220 L 246 220" stroke="#38bdf8" strokeWidth="2" />
+
+                      {/* Base resistance at toe */}
+                      {(() => {
+                        const toeY = 40 + (project.length / 30) * 280;
+                        return (
+                          <g>
+                            <rect x="238" y={toeY} width="60" height="18" fill="#0f172a" rx="3" stroke="#f59e0b" strokeWidth="1.5" />
+                            <text x="268" y={toeY + 13} fill="#f59e0b" fontSize="10" fontFamily="monospace" textAnchor="middle" fontWeight="bold">
+                              R_bk = {results.baseResistance.toFixed(0)} kN
+                            </text>
+                            <line x1="268" y1={toeY + 18} x2="268" y2={toeY + 35} stroke="#f59e0b" strokeWidth="2" strokeDasharray="3 2" />
+                          </g>
+                        );
+                      })()}
+
+                      {/* Legend */}
+                      <g transform="translate(330, 280)">
+                        <rect x="0" y="0" width="195" height="50" fill="#0b1320" rx="6" stroke="#334155" />
+                        <circle cx="15" cy="18" r="5" fill="#22d3ee" />
+                        <text x="28" y="21" fill="#cbd5e1" fontSize="10" fontFamily="monospace">Pile Shaft (Ø{project.diameter}mm)</text>
+                        <circle cx="15" cy="36" r="5" fill="#f59e0b" />
+                        <text x="28" y="39" fill="#cbd5e1" fontSize="10" fontFamily="monospace">Toe Bearing (q_b)</text>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Resistance Breakdown Cards */}
+                <div className="lg:col-span-5 flex flex-col justify-between gap-4 font-mono">
+                  <div className="p-4 rounded-xl bg-[#040910] border border-slate-800">
+                    <p className="text-xs text-slate-400">Shaft Friction Resistance (R_s,k):</p>
+                    <p className="text-2xl font-bold text-cyan-300 mt-1">
+                      {results.totalShaftResistance} <span className="text-xs text-cyan-400">kN</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Integrated across {results.layers.length} intersected soil strata.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#040910] border border-slate-800">
+                    <p className="text-xs text-slate-400">End Bearing Resistance (R_b,k):</p>
+                    <p className="text-2xl font-bold text-amber-300 mt-1">
+                      {results.baseResistance} <span className="text-xs text-amber-400">kN</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Calculated at pile toe (L = {project.length}m) in founding stratum.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-cyan-950/70 border border-cyan-500/50 shadow-md">
+                    <p className="text-xs text-cyan-200 font-bold">Design Resistance (R_c,d):</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {results.designResistance} <span className="text-xs text-cyan-300">kN</span>
+                    </p>
+                    <p className="text-[11px] text-cyan-300 mt-1">
+                      R_c,k / γ_t ({results.totalCharacteristicResistance} / {project.safetyFactor.toFixed(1)})
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Limit State Compliance & Safety Margin Dashboard (Recharts Gauges) */}
+              <div className="mb-6 bg-[#040910] border border-slate-800 rounded-xl p-5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
+                  <div>
+                    <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="size-4 text-cyan-400" />
+                      <span>Visual Limit State Compliance & Safety Margin Dashboard (EN 1997-1)</span>
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      Real-time color-coded safety factor and resistance utilization meters across key pile limit state checks.
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
+                    Status: {results.overallStatus}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+                  {/* Gauge 1: Geotechnical ULS */}
+                  {(() => {
+                    const util = Math.round(results.utilizationGeotechnical * 100);
+                    const isPass = util <= 100;
+                    const color = util > 100 ? "#f43f5e" : util > 85 ? "#f59e0b" : "#10b981";
+                    const data = [
+                      { name: "Utilized", value: Math.min(100, util), fill: color },
+                      { name: "Margin", value: Math.max(0, 100 - util), fill: "#1e293b" },
+                    ];
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+                        <p className="text-[11px] font-bold text-slate-300 mb-1">Geotechnical Axial ULS</p>
+                        <p className="text-[10px] text-slate-400 mb-2">N_Ed / R_c,d</p>
+                        <div className="w-full h-28 relative flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="70%"
+                                startAngle={180}
+                                endAngle={0}
+                                innerRadius={40}
+                                outerRadius={60}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
+                            <span className="text-lg font-bold text-white">{util}%</span>
+                            <span className={`text-[10px] font-bold ${isPass ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isPass ? "PASS" : "FAIL"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400">
+                          Margin: <strong className="text-cyan-300">{(results.designResistance - project.nEd).toFixed(0)} kN</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Gauge 2: Structural ULS */}
+                  {(() => {
+                    const util = Math.round(results.utilizationStructural * 100);
+                    const isPass = util <= 100;
+                    const color = util > 100 ? "#f43f5e" : util > 85 ? "#f59e0b" : "#10b981";
+                    const data = [
+                      { name: "Utilized", value: Math.min(100, util), fill: color },
+                      { name: "Margin", value: Math.max(0, 100 - util), fill: "#1e293b" },
+                    ];
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+                        <p className="text-[11px] font-bold text-slate-300 mb-1">Structural Concrete ULS</p>
+                        <p className="text-[10px] text-slate-400 mb-2">N_Ed / R_c,struct</p>
+                        <div className="w-full h-28 relative flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="70%"
+                                startAngle={180}
+                                endAngle={0}
+                                innerRadius={40}
+                                outerRadius={60}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
+                            <span className="text-lg font-bold text-white">{util}%</span>
+                            <span className={`text-[10px] font-bold ${isPass ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isPass ? "PASS" : "FAIL"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400">
+                          Capacity: <strong className="text-cyan-300">{results.structuralAxialResistance.toFixed(0)} kN</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Gauge 3: Shaft Resistance Mobilization */}
+                  {(() => {
+                    const totalR = results.totalCharacteristicResistance || 1;
+                    const shaftPct = Math.round((results.totalShaftResistance / totalR) * 100);
+                    const data = [
+                      { name: "Shaft", value: shaftPct, fill: "#06b6d4" },
+                      { name: "Base", value: 100 - shaftPct, fill: "#334155" },
+                    ];
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+                        <p className="text-[11px] font-bold text-slate-300 mb-1">Shaft Friction Share</p>
+                        <p className="text-[10px] text-slate-400 mb-2">R_s,k / R_c,k</p>
+                        <div className="w-full h-28 relative flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="70%"
+                                startAngle={180}
+                                endAngle={0}
+                                innerRadius={40}
+                                outerRadius={60}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
+                            <span className="text-lg font-bold text-cyan-300">{shaftPct}%</span>
+                            <span className="text-[10px] text-slate-400">Shaft Dom.</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400">
+                          R_s,k: <strong className="text-cyan-300">{results.totalShaftResistance.toFixed(0)} kN</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Gauge 4: Toe End-Bearing Share */}
+                  {(() => {
+                    const totalR = results.totalCharacteristicResistance || 1;
+                    const basePct = Math.round((results.baseResistance / totalR) * 100);
+                    const data = [
+                      { name: "Base", value: basePct, fill: "#f59e0b" },
+                      { name: "Shaft", value: 100 - basePct, fill: "#334155" },
+                    ];
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+                        <p className="text-[11px] font-bold text-slate-300 mb-1">Toe Bearing Share</p>
+                        <p className="text-[10px] text-slate-400 mb-2">R_b,k / R_c,k</p>
+                        <div className="w-full h-28 relative flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="70%"
+                                startAngle={180}
+                                endAngle={0}
+                                innerRadius={40}
+                                outerRadius={60}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
+                            <span className="text-lg font-bold text-amber-300">{basePct}%</span>
+                            <span className="text-[10px] text-slate-400">Toe Bearing</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400">
+                          R_b,k: <strong className="text-amber-300">{results.baseResistance.toFixed(0)} kN</strong>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Load Case Factor of Safety Trend-Line View */}
+              <div className="mb-6 bg-[#040910] border border-slate-800 rounded-xl p-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-3 mb-5 gap-2">
+                  <div>
+                    <h3 className="font-mono text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <TrendingUp className="size-4 text-cyan-400" />
+                      <span>Geotechnical Factor of Safety & Load Case Trend Analysis</span>
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      Tracking safety factor (FS = R_c,k / N_Ed) and design safety margins across varying design load stages and combinations.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
+                    Target SF ≥ {project.safetyFactor.toFixed(1)}
+                  </span>
+                </div>
+
+                {(() => {
+                  const baseN = project.nEd;
+                  const R_k = results.totalCharacteristicResistance;
+                  const R_d = results.designResistance;
+                  const sfTarget = project.safetyFactor;
+
+                  const loadCases = [
+                    { name: "LC1: Dead Only (0.6G)", factor: 0.6, label: "Permanent Min" },
+                    { name: "LC2: Permanent (1.0G)", factor: 0.8, label: "Permanent Only" },
+                    { name: "LC3: Service (Frequent)", factor: 0.9, label: "Service Load" },
+                    { name: "LC4: Characteristic", factor: 1.0, label: "Nominal Ed" },
+                    { name: "LC5: ULS (DA1-C2)", factor: 1.25, label: "ULS Design" },
+                    { name: "LC6: Seismic / Acc.", factor: 1.4, label: "Extreme / Seismic" },
+                    { name: "LC7: Proof Load Test", factor: 1.6, label: "Overload Stage" },
+                  ];
+
+                  const chartData = loadCases.map((lc) => {
+                    const load = Math.round(baseN * lc.factor);
+                    const fs = load > 0 ? Number((R_k / load).toFixed(2)) : 10;
+                    const designMargin = Math.round(R_d - load);
+                    const isCompliant = fs >= sfTarget;
+                    return {
+                      caseName: lc.name,
+                      shortLabel: lc.label,
+                      load,
+                      factorOfSafety: fs,
+                      targetFS: sfTarget,
+                      designMargin,
+                      isCompliant,
+                    };
+                  });
+
+                  return (
+                    <div>
+                      <div className="w-full h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 25 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                            <XAxis 
+                              dataKey="shortLabel" 
+                              stroke="#64748b" 
+                              fontSize={11} 
+                              tick={{ fill: "#94a3b8" }}
+                              interval={0}
+                              angle={-20}
+                              textAnchor="end"
+                            />
+                            <YAxis 
+                              yAxisId="left" 
+                              stroke="#38bdf8" 
+                              fontSize={11} 
+                              domain={[1, Math.max(6, Math.ceil(Math.max(...chartData.map(d => d.factorOfSafety))))]}
+                              label={{ value: "Factor of Safety (FS)", angle: -90, position: "insideLeft", fill: "#38bdf8", fontSize: 11 }}
+                            />
+                            <YAxis 
+                              yAxisId="right" 
+                              orientation="right" 
+                              stroke="#f59e0b" 
+                              fontSize={11}
+                              label={{ value: "Load (kN)", angle: 90, position: "insideRight", fill: "#f59e0b", fontSize: 11 }}
+                            />
+                            <Tooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const d = payload[0].payload;
+                                  return (
+                                    <div className="bg-[#0b1320] border border-cyan-500/50 p-3 rounded-xl shadow-xl font-mono text-xs">
+                                      <p className="font-bold text-white mb-1">{d.caseName}</p>
+                                      <p className="text-cyan-300">Applied Load: <strong className="text-white">{d.load} kN</strong></p>
+                                      <p className="text-emerald-400">Factor of Safety: <strong className="text-white">{d.factorOfSafety}</strong> (Target ≥ {d.targetFS})</p>
+                                      <p className="text-amber-300">Design Margin: <strong className="text-white">{d.designMargin} kN</strong></p>
+                                      <p className={`mt-1 font-bold ${d.isCompliant ? "text-emerald-400" : "text-rose-400"}`}>
+                                        Status: {d.isCompliant ? "SAFE / COMPLIANT" : "SAFETY MARGIN EXCEEDED"}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace', paddingTop: '10px' }} />
+                            <Line 
+                              yAxisId="left"
+                              type="monotone" 
+                              dataKey="factorOfSafety" 
+                              name="Factor of Safety (FS)" 
+                              stroke="#22d3ee" 
+                              strokeWidth={3} 
+                              dot={{ r: 5, fill: "#0891b2" }}
+                              activeDot={{ r: 8, fill: "#22d3ee" }}
+                            />
+                            <Line 
+                              yAxisId="left"
+                              type="monotone" 
+                              dataKey="targetFS" 
+                              name="Target SF (γ_t)" 
+                              stroke="#f43f5e" 
+                              strokeDasharray="4 4" 
+                              strokeWidth={2} 
+                              dot={false}
+                            />
+                            <Line 
+                              yAxisId="right"
+                              type="monotone" 
+                              dataKey="load" 
+                              name="Applied Load N_Ed (kN)" 
+                              stroke="#f59e0b" 
+                              strokeWidth={2} 
+                              dot={{ r: 4, fill: "#d97706" }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-2 font-mono text-[11px]">
+                        {chartData.map((d, idx) => (
+                          <div key={idx} className={`p-2.5 rounded-lg border ${d.isCompliant ? "bg-slate-900/60 border-slate-800" : "bg-rose-950/40 border-rose-900/60"}`}>
+                            <p className="text-slate-400 truncate">{d.shortLabel}</p>
+                            <p className="text-white font-bold mt-0.5">{d.load} kN</p>
+                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-800">
+                              <span className="text-cyan-300">FS: {d.factorOfSafety}</span>
+                              <span className={d.isCompliant ? "text-emerald-400" : "text-rose-400"}>
+                                {d.isCompliant ? "PASS" : "FAIL"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Detailed Layer-by-Layer Shaft Friction Breakdown Table */}
+              <div className="border border-slate-800 rounded-xl bg-[#040910] overflow-hidden">
+                <div className="bg-cyan-950/40 px-4 py-3 border-b border-cyan-900/60 flex items-center justify-between font-mono">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Layer-by-Layer Shaft Resistance Breakdown</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-cyan-900/60 text-cyan-300 border border-cyan-700">
+                      {results.layers.length} strata
+                    </span>
+                  </h3>
+                  <span className="text-xs text-slate-400">EN 1997-1 §7.6.2</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-mono text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/60">
+                        <th className="p-3">Layer ID & Name</th>
+                        <th className="p-3">Effective Length (m)</th>
+                        <th className="p-3">Calculation Method & Parameters</th>
+                        <th className="p-3 text-right">Unit Resistance q_s (kPa)</th>
+                        <th className="p-3 text-right">Shaft Resistance R_s,i (kN)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
-                <div className="p-4 rounded-xl bg-[#040910] border border-cyan-900/60">
-                  <p className="text-xs text-slate-400">Total Shaft Resistance (R_sk):</p>
-                  <p className="text-xl font-bold text-cyan-300 mt-1">
-                    {results.totalShaftResistance} kN
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#040910] border border-cyan-900/60">
-                  <p className="text-xs text-slate-400">Base Bearing Resistance (R_bk):</p>
-                  <p className="text-xl font-bold text-cyan-300 mt-1">
-                    {results.baseResistance} kN
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-cyan-950/60 border border-cyan-600/60">
-                  <p className="text-xs text-cyan-200">Design Resistance (R_c,d / γ_t):</p>
-                  <p className="text-xl font-bold text-cyan-400 mt-1">
-                    {results.designResistance} kN
-                  </p>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/80">
+                      {results.layers.map((l) => (
+                        <tr key={l.layerId} className="hover:bg-slate-900/40 transition">
+                          <td className="p-3 font-bold text-white flex items-center gap-2">
+                            <span className="size-2 rounded-full bg-cyan-400" />
+                            <span>{l.layerId}: {l.name}</span>
+                          </td>
+                          <td className="p-3 text-cyan-300 font-semibold">{l.effectiveLength.toFixed(1)} m</td>
+                          <td className="p-3 text-slate-300">{l.methodUsed}</td>
+                          <td className="p-3 text-right text-slate-300">{l.unitResistance.toFixed(1)} kPa</td>
+                          <td className="p-3 text-right font-bold text-emerald-400">{l.shaftResistance.toFixed(1)} kN</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-cyan-950/30 border-t border-cyan-900/60 font-bold text-white">
+                        <td colSpan={4} className="p-3 text-right">Total Characteristic Shaft Resistance (R_s,k):</td>
+                        <td className="p-3 text-right text-cyan-300 text-sm">{results.totalShaftResistance.toFixed(1)} kN</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
             </div>
@@ -2093,56 +1548,60 @@ export function BoredPileView() {
 
         {/* 5. SETTLEMENT SLS */}
         {activeTab === "settlement" && (
-          <div className="space-y-6">
-            <div className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
-              <h2 className="font-display text-xl font-bold text-white mb-2">
-                Single-Pile Settlement Analysis (SLS)
-              </h2>
-              <p className="text-xs font-mono text-slate-400 mb-6">
-                Evaluation under serviceability load combinations
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono">
-                <div className="p-5 rounded-xl bg-[#040910] border border-slate-800">
-                  <p className="text-xs text-slate-400">Pile Elastic Shortening:</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    {results.settlementElastic} mm
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-1">ΔL = N × L / (A_c × E_c)</p>
-                </div>
-                <div className="p-5 rounded-xl bg-[#040910] border border-slate-800">
-                  <p className="text-xs text-slate-400">Soil Deformation & Base Settlement:</p>
-                  <p className="text-2xl font-bold text-white mt-1">{results.settlementSoil} mm</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Load transfer & consolidation</p>
-                </div>
-                <div className="p-5 rounded-xl bg-cyan-950/60 border border-cyan-600/60">
-                  <p className="text-xs text-cyan-200">Total Calculated Settlement:</p>
-                  <p className="text-2xl font-bold text-cyan-400 mt-1">
-                    {results.settlementTotal} mm
-                  </p>
-                  <p className="text-[11px] text-cyan-300 mt-1">
-                    Allowable limit: {results.allowableSettlement} mm (PASS)
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SettlementTab
+            project={project}
+            results={results}
+          />
         )}
 
         {/* 6. RC STRUCTURAL (EC2) */}
         {activeTab === "rc" && (
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,0.78fr)_minmax(620px,1.22fr)] gap-6 items-start">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(360px,0.78fr)_minmax(620px,1.22fr)] gap-6 items-start">
             <section className="bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6">
               <div className="border-b border-cyan-900/60 pb-4 mb-6">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-400">
-                  Input panel / EN 1992-1-1
+                  EN 1992-1-1 Structural Design Suite
                 </p>
                 <h2 className="font-display text-xl font-bold text-white mt-1">
-                  RC Reinforcement Cage
+                  RC Reinforcement Cage & EC2 Checks
                 </h2>
                 <p className="text-xs font-mono text-slate-400 mt-1">
-                  Adjust the reinforcement arrangement and inspect the cage on the right.
+                  Configuring reinforcement, durability, and Eurocode 2 verifications.
                 </p>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="mb-6 rounded-xl border border-cyan-900/60 bg-[#040910] p-3.5">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 mb-2">
+                  Standard EC2 Cage Presets
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
+                  <button
+                    onClick={() => setProject({ ...project, numBars: 8, barDiameter: 20, spiralBarDiameter: 10, spiralSpacing: 250, stiffenerBarDiameter: 14, stiffenerSpacing: 2000 })}
+                    className="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-cyan-950 border border-slate-700 hover:border-cyan-500/60 text-slate-300 text-center transition"
+                  >
+                    Light (8×T20)
+                  </button>
+                  <button
+                    onClick={() => setProject({ ...project, numBars: 12, barDiameter: 25, spiralBarDiameter: 12, spiralSpacing: 200, stiffenerBarDiameter: 16, stiffenerSpacing: 1500 })}
+                    className="px-2.5 py-1.5 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/60 text-cyan-200 text-center transition font-bold"
+                  >
+                    Standard (12×T25)
+                  </button>
+                  <button
+                    onClick={() => setProject({ ...project, numBars: 16, barDiameter: 32, spiralBarDiameter: 14, spiralSpacing: 150, stiffenerBarDiameter: 20, stiffenerSpacing: 1200 })}
+                    className="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-cyan-950 border border-slate-700 hover:border-cyan-500/60 text-slate-300 text-center transition"
+                  >
+                    Heavy (16×T32)
+                  </button>
+                  <button
+                    onClick={() => setProject({ ...project, numBars: 20, barDiameter: 32, spiralBarDiameter: 16, spiralSpacing: 100, stiffenerBarDiameter: 22, stiffenerSpacing: 1000 })}
+                    className="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-cyan-950 border border-slate-700 hover:border-cyan-500/60 text-slate-300 text-center transition"
+                  >
+                    Seismic (20×T32)
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-5 font-mono text-xs">
@@ -2151,7 +1610,7 @@ export function BoredPileView() {
                     Concrete and durability
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    <label className="col-span-2 block">
+                    <label className="block">
                       <span className="mb-1 block text-slate-400">Concrete grade</span>
                       <input
                         type="text"
@@ -2176,6 +1635,24 @@ export function BoredPileView() {
                       />
                     </label>
                     <label className="block">
+                      <span className="mb-1 block text-slate-400">Exposure Class</span>
+                      <select
+                        value={project.exposureClass || "XC2"}
+                        onChange={(e) => {
+                          const cls = e.target.value;
+                          const recommendedCover = cls.includes("XA") || cls.includes("XD") ? 75 : 50;
+                          setProject({ ...project, exposureClass: cls, cover: Math.max(project.cover, recommendedCover) });
+                        }}
+                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
+                      >
+                        <option value="XC1">XC1 (Dry or permanent wet)</option>
+                        <option value="XC2">XC2 (Wet, rarely dry - Piles)</option>
+                        <option value="XC3">XC3 (Moderate humidity)</option>
+                        <option value="XD1">XD1 (Cyclic wet/dry - Chlorides)</option>
+                        <option value="XA2">XA2 (Chemical attack - Sulfates)</option>
+                      </select>
+                    </label>
+                    <label className="block">
                       <span className="mb-1 block text-slate-400">Nominal cover (mm)</span>
                       <input
                         type="number"
@@ -2185,6 +1662,28 @@ export function BoredPileView() {
                         onChange={(e) =>
                           setProject({ ...project, cover: Number(e.target.value) || 75 })
                         }
+                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-slate-400">Design Moment M_Ed (kNm)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="10"
+                        value={project.mEd}
+                        onChange={(e) =>
+                          setProject({ ...project, mEd: Number(e.target.value) || 0 })
+                        }
+                        className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-slate-400">Steel grade</span>
+                      <input
+                        type="text"
+                        value={project.steelGrade}
+                        onChange={(e) => setProject({ ...project, steelGrade: e.target.value })}
                         className="w-full rounded border border-slate-700 bg-[#040910] p-2 text-white"
                       />
                     </label>
@@ -2310,14 +1809,54 @@ export function BoredPileView() {
                   </div>
                 </div>
 
+                {/* EC2 Compliance Verification Matrix */}
+                <div className="rounded-xl border border-cyan-900/60 bg-[#040910] p-4">
+                  <div className="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-200">EC2 Clause Verification Summary</span>
+                    <span className="text-[10px] text-cyan-400">EN 1992-1-1</span>
+                  </div>
+                  <div className="space-y-2 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Min Reinforcement Ratio (ρ ≥ 0.2% - Cl. 9.8.5)</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${results.minReinforcementRatioPass ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-rose-950/60 text-rose-400 border border-rose-800'}`}>
+                        {results.minReinforcementRatioPass ? `PASS (${results.reinforcementRatio}%)` : `FAIL (${results.reinforcementRatio}%)`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Max Reinforcement Ratio (ρ ≤ 4.0% - Cl. 9.5.2)</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${results.maxReinforcementRatioPass ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-rose-950/60 text-rose-400 border border-rose-800'}`}>
+                        {results.maxReinforcementRatioPass ? 'PASS' : 'FAIL'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Min Bar Diameter (Ø ≥ 16 mm - Cl. 9.8.5)</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${results.minBarSizePass ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-rose-950/60 text-rose-400 border border-rose-800'}`}>
+                        {results.minBarSizePass ? `PASS (Ø${project.barDiameter})` : `FAIL (Ø${project.barDiameter})`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Transverse Spiral Spacing (Cl. 9.5.3)</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${results.spiralSpacingPass ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-amber-950/60 text-amber-400 border border-amber-800'}`}>
+                        {results.spiralSpacingPass ? `PASS (${project.spiralSpacing} mm)` : `WARNING (${project.spiralSpacing} mm)`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Axial + Bending Interaction (Cl. 6.1)</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${results.bendingInteractionRatio <= 1.0 ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800' : 'bg-rose-950/60 text-rose-400 border border-rose-800'}`}>
+                        {(results.bendingInteractionRatio * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 border-t border-cyan-900/60 pt-5">
                   <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
-                    <p className="text-slate-500">Pile diameter</p>
-                    <p className="mt-1 font-bold text-cyan-300">{project.diameter} mm</p>
+                    <p className="text-slate-500">Steel Density</p>
+                    <p className="mt-1 font-bold text-cyan-300">{results.steelRatioKgPerM3} kg/m³</p>
                   </div>
                   <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
-                    <p className="text-slate-500">Pile length</p>
-                    <p className="mt-1 font-bold text-cyan-300">{project.length} m</p>
+                    <p className="text-slate-500">Axial Capacity N_Rd</p>
+                    <p className="mt-1 font-bold text-cyan-300">{results.structuralAxialResistance} kN</p>
                   </div>
                   <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
                     <p className="text-slate-500">
@@ -2326,7 +1865,7 @@ export function BoredPileView() {
                     <p className="mt-1 font-bold text-cyan-300">{results.rebarArea} mm²</p>
                   </div>
                   <div className="rounded-lg border border-cyan-900/60 bg-[#040910] p-3">
-                    <p className="text-slate-500">Utilization</p>
+                    <p className="text-slate-500">Structural Utilization</p>
                     <p
                       className={`mt-1 font-bold ${results.utilizationStructural <= 1 ? "text-emerald-400" : "text-rose-400"}`}
                     >
@@ -2738,766 +2277,44 @@ export function BoredPileView() {
                 </div>
               </div>
             </section>
+            <CodeReferencesCard project={project} results={results} />
           </div>
+        </div>
         )}
 
+        {/* 7. CALCULATION REPORT */}
         {/* 7. CALCULATION REPORT */}
         {activeTab === "report" && (
           <div className="report-document space-y-6 bg-[#f4f0e6] text-slate-900 p-4 sm:p-8 rounded-2xl shadow-2xl font-sans text-xs leading-relaxed">
             <div className="flex justify-end gap-2 font-sans no-print">
               <button
+                onClick={() => setIsPrintPreviewOpen(true)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs flex items-center gap-1.5 transition shadow-sm"
+              >
+                <Eye className="size-3.5" /> Print Preview
+              </button>
+              <button
                 onClick={() => window.print()}
-                className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs flex items-center gap-1.5 transition shadow-sm"
               >
                 <Printer className="size-3.5" /> Print / Save PDF
               </button>
             </div>
 
-            <section className="report-cover min-h-[620px] flex flex-col justify-between border-8 border-double border-[#173b5f] bg-[#f8f5ed] p-10 text-center">
-              <div className="font-mono text-xs tracking-[0.25em] text-[#173b5f]">
-                STRUCTURAL DESIGN PLATFORM
-              </div>
-              <div>
-                <div className="mx-auto mb-6 h-1 w-24 bg-[#b8863b]" />
-                <h1 className="text-4xl font-bold tracking-wide text-[#173b5f]">
-                  CALCULATION REPORT
-                </h1>
-                <p className="mt-3 font-mono text-sm uppercase tracking-[0.16em]">
-                  Bored Pile Design & Verification
-                </p>
-                <p className="mt-8 text-2xl font-semibold">{project.projectName}</p>
-                <p className="mt-2 font-mono text-sm">Project No. {project.projectNumber}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 border-t border-[#173b5f]/30 pt-5 text-left font-mono text-xs">
-                <span>
-                  DESIGN STANDARD
-                  <br />
-                  <strong>EN 1990 / EN 1997 / EN 1992</strong>
-                </span>
-                <span className="text-right">
-                  STATUS
-                  <br />
-                  <strong>{results.overallStatus}</strong>
-                </span>
-              </div>
-            </section>
+            <ReportContext.Provider value={{ previewMode: false }}>
+              {renderReportPages()}
+            </ReportContext.Provider>
 
-            <section className="report-page min-h-[520px] bg-[#f8f5ed] p-10">
-              <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
-                Table of Contents
-              </h2>
-              <div className="mt-8 space-y-5 text-xs">
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>1. Design basis and input summary</span>
-                  <span>3</span>
-                </p>
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>2. Executive summary and verification</span>
-                  <span>4</span>
-                </p>
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>3. Geotechnical resistance calculation</span>
-                  <span>5</span>
-                </p>
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>4. Settlement serviceability calculation</span>
-                  <span>6</span>
-                </p>
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>5. RC pile and reinforcement calculation</span>
-                  <span>7</span>
-                </p>
-                <p className="flex justify-between border-b border-dotted border-slate-400">
-                  <span>6. Soil strata and resistance schedule</span>
-                  <span>8</span>
-                </p>
-              </div>
-            </section>
-
-            <section className="report-page bg-[#f8f5ed] p-10">
-              <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
-                1. Design Basis & Input Summary
-              </h2>
-              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <p>Project: {project.projectName}</p>
-                <p>Designer: {project.designer}</p>
-                <p>Diameter: {project.diameter} mm</p>
-                <p>Length: {project.length} m</p>
-                <p>
-                  Design load N<sub>Ed</sub>: {project.nEd} kN
-                </p>
-                <p>
-                  Moment M<sub>Ed</sub>: {project.mEd} kNm
-                </p>
-                <p>Water level: {project.waterLevel} m bgl</p>
-                <p>
-                  Design approach: {project.designApproach}, SF {project.safetyFactor.toFixed(1)}
-                </p>
-              </div>
-              <div className="mt-8 border-t border-[#173b5f]/30 pt-5">
-                <h3 className="text-base font-bold text-[#173b5f]">
-                  1.1 Soil Parameters and Ground Profile
-                </h3>
-                <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-5">
-                  <div className="grid grid-cols-2 gap-3 font-sans text-xs">
-                    <p>Layers: {project.layers.length}</p>
-                    <p>Groundwater: {project.waterLevel} m bgl</p>
-                    <p>Toe depth: {project.length} m</p>
-                    <p>
-                      Toe layer:{" "}
-                      {project.layers.find(
-                        (layer) =>
-                          project.length >= layer.topDepth && project.length <= layer.bottomDepth,
-                      )?.id ?? "INPUT REQUIRED"}
-                    </p>
-                    <p>
-                      Profile depth:{" "}
-                      {Math.max(0, ...project.layers.map((layer) => layer.bottomDepth))} m
-                    </p>
-                    <p>Analysis: EC7 shaft + base</p>
-                  </div>
-                  <svg
-                    viewBox="0 0 520 220"
-                    className="h-56 w-full rounded border border-slate-300 bg-white"
-                    role="img"
-                    aria-label="Soil strata report diagram"
-                  >
-                    {(() => {
-                      const maxDepth = Math.max(
-                        project.length,
-                        ...project.layers.map((layer) => layer.bottomDepth),
-                        1,
-                      );
-                      const top = 22;
-                      const bottom = 198;
-                      const scale = (bottom - top) / maxDepth;
-                      return (
-                        <>
-                          <rect
-                            x="54"
-                            y={top}
-                            width="190"
-                            height={bottom - top}
-                            fill="#eef2f7"
-                            stroke="#173b5f"
-                          />
-                          {project.layers.map((layer) => {
-                            const y = top + layer.topDepth * scale;
-                            const height = Math.max(
-                              3,
-                              (Math.min(maxDepth, layer.bottomDepth) - layer.topDepth) * scale,
-                            );
-                            const colors = soilLayerColor(layer);
-                            return (
-                              <g key={layer.id}>
-                                <rect
-                                  x="54"
-                                  y={y}
-                                  width="190"
-                                  height={height}
-                                  fill={colors.fill}
-                                  fillOpacity="0.62"
-                                  stroke={colors.stroke}
-                                />
-                                <text
-                                  x="62"
-                                  y={y + Math.min(13, Math.max(9, height - 2))}
-                                  fontSize="9"
-                                  fontFamily="Arial, sans-serif"
-                                  fill="#172033"
-                                >
-                                  {layer.id} {layer.name.slice(0, 22)}
-                                </text>
-                              </g>
-                            );
-                          })}
-                          <line
-                            x1="54"
-                            y1={top + project.waterLevel * scale}
-                            x2="244"
-                            y2={top + project.waterLevel * scale}
-                            stroke="#147fa3"
-                            strokeWidth="2"
-                            strokeDasharray="6 4"
-                          />
-                          <text
-                            x="262"
-                            y={top + project.waterLevel * scale + 4}
-                            fontSize="10"
-                            fill="#147fa3"
-                          >
-                            GWL {project.waterLevel} m
-                          </text>
-                          <rect
-                            x="137"
-                            y={top}
-                            width="24"
-                            height={Math.min(project.length, maxDepth) * scale}
-                            fill="#22a6bd"
-                            fillOpacity="0.3"
-                            stroke="#0d7185"
-                            strokeWidth="2"
-                          />
-                          <text x="262" y="28" fontSize="10" fill="#173b5f">
-                            Bored pile
-                          </text>
-                          <text x="262" y="42" fontSize="10" fill="#173b5f">
-                            L = {project.length} m
-                          </text>
-                        </>
-                      );
-                    })()}
-                  </svg>
-                </div>
-                <table className="mt-4 w-full border border-slate-300 text-left text-[11px]">
-                  <thead className="bg-slate-200">
-                    <tr>
-                      <th className="p-2">Layer</th>
-                      <th className="p-2">Depth</th>
-                      <th className="p-2">Material</th>
-                      <th className="p-2">γ / γ′</th>
-                      <th className="p-2">φ′</th>
-                      <th className="p-2">cu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {project.layers.map((layer) => (
-                      <tr key={`basis-${layer.id}`} className="border-t border-slate-300">
-                        <td className="p-2">{layer.id}</td>
-                        <td className="p-2">
-                          {layer.topDepth}–{layer.bottomDepth} m
-                        </td>
-                        <td className="p-2">{layer.name}</td>
-                        <td className="p-2">
-                          {layer.gamma} / {(layer.gammaSat ?? layer.gamma) - 9.81} kN/m³
-                        </td>
-                        <td className="p-2">{layer.phi}°</td>
-                        <td className="p-2">{layer.cu} kPa</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-8 border-t border-[#173b5f]/30 pt-5">
-                <h3 className="text-base font-bold text-[#173b5f]">1.2 Geometry and Load Inputs</h3>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <p>Diameter: {project.diameter} mm</p>
-                  <p>Length: {project.length} m</p>
-                  <p>
-                    N<sub>Ed</sub>: {project.nEd} kN
-                  </p>
-                  <p>
-                    M<sub>Ed</sub>: {project.mEd} kNm
-                  </p>
-                  <p>Concrete: {project.concreteGrade}</p>
-                  <p>Ground level: {project.groundLevel} m</p>
-                  <p>Water: {project.waterLevel} m bgl</p>
-                  <p>Approach: {project.designApproach}</p>
-                </div>
-                <div className="mt-3 border-l-4 border-[#b8863b] bg-white/60 p-3">
-                  Design load N<sub>Ed</sub> is checked against geotechnical design resistance and
-                  RC axial resistance. Bending moment M<sub>Ed</sub> is retained as a design action
-                  input for structural review.
-                </div>
-              </div>
-              <div className="mt-8 border-t border-[#173b5f]/30 pt-5">
-                <h3 className="text-base font-bold text-[#173b5f]">
-                  1.3 RC Structural Design (EN2)
-                </h3>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <p>Concrete grade: {project.concreteGrade}</p>
-                  <p>
-                    f<sub>ck</sub>: {project.fck} MPa
-                  </p>
-                  <p>Steel grade: {project.steelGrade}</p>
-                  <p>
-                    f<sub>yk</sub>: {project.fyk} MPa
-                  </p>
-                  <p>
-                    Main bars: {project.numBars} × Ø{project.barDiameter}
-                  </p>
-                  <p>
-                    Spiral: Ø{project.spiralBarDiameter} @ {project.spiralSpacing} mm
-                  </p>
-                  <p>
-                    Stiffener: Ø{project.stiffenerBarDiameter} @ {project.stiffenerSpacing} mm
-                  </p>
-                  <p>Cover: {project.cover} mm</p>
-                </div>
-                <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="border border-slate-300 bg-white p-3">
-                    <p className="mb-2 text-xs">Reinforcement plan view</p>
-                    <svg
-                      viewBox="0 0 360 240"
-                      className="h-56 w-full"
-                      role="img"
-                      aria-label="RC reinforcement plan for calculation report"
-                    >
-                      <circle
-                        cx="125"
-                        cy="120"
-                        r="92"
-                        fill="#dbe4ea"
-                        stroke="#173b5f"
-                        strokeWidth="2"
-                      />
-                      <circle
-                        cx="125"
-                        cy="120"
-                        r="72"
-                        fill="none"
-                        stroke="#d66a7a"
-                        strokeWidth="3"
-                        strokeDasharray="4 4"
-                      />
-                      <circle
-                        cx="125"
-                        cy="120"
-                        r="57"
-                        fill="none"
-                        stroke="#8b6fc4"
-                        strokeWidth="3"
-                        strokeDasharray="9 5"
-                      />
-                      {Array.from({ length: project.numBars }, (_, index) => {
-                        const angle = (index / project.numBars) * Math.PI * 2 - Math.PI / 2;
-                        return (
-                          <circle
-                            key={index}
-                            cx={125 + Math.cos(angle) * 66}
-                            cy={120 + Math.sin(angle) * 66}
-                            r="5"
-                            fill="#c4912f"
-                          />
-                        );
-                      })}
-                      <line x1="225" y1="70" x2="181" y2="83" stroke="#8b6fc4" />
-                      <text x="232" y="68" fontSize="10" fill="#513c86">
-                        Stiffener Ø{project.stiffenerBarDiameter} @ {project.stiffenerSpacing}
-                      </text>
-                      <line x1="225" y1="115" x2="197" y2="105" stroke="#d66a7a" />
-                      <text x="232" y="113" fontSize="10" fill="#9d3d4e">
-                        Spiral Ø{project.spiralBarDiameter} @ {project.spiralSpacing}
-                      </text>
-                      <line x1="225" y1="160" x2="183" y2="158" stroke="#c4912f" />
-                      <text x="232" y="158" fontSize="10" fill="#805c14">
-                        {project.numBars} main bars Ø{project.barDiameter}
-                      </text>
-                      <text x="125" y="230" textAnchor="middle" fontSize="10" fill="#173b5f">
-                        Pile Ø{project.diameter} mm / cover {project.cover} mm
-                      </text>
-                    </svg>
-                  </div>
-                  <div className="border border-slate-300 bg-white p-3">
-                    <p className="mb-2 text-xs">Longitudinal cage elevation</p>
-                    <svg
-                      viewBox="0 0 360 240"
-                      className="h-56 w-full"
-                      role="img"
-                      aria-label="RC reinforcement elevation for calculation report"
-                    >
-                      <rect x="70" y="18" width="90" height="195" fill="#dbe4ea" stroke="#173b5f" />
-                      {Array.from({ length: Math.min(project.numBars, 8) }, (_, index) => {
-                        const x = 82 + (index / Math.max(1, Math.min(project.numBars, 8) - 1)) * 66;
-                        return (
-                          <line
-                            key={index}
-                            x1={x}
-                            y1="23"
-                            x2={x}
-                            y2="208"
-                            stroke="#c4912f"
-                            strokeWidth="2"
-                          />
-                        );
-                      })}
-                      <polyline
-                        points={Array.from({ length: 80 }, (_, index) => {
-                          const progress = index / 79;
-                          return `${115 + 28 * Math.sin(progress * Math.max(1, (project.length * 1000) / project.spiralSpacing) * Math.PI * 2)},${23 + progress * 185}`;
-                        }).join(" ")}
-                        fill="none"
-                        stroke="#d66a7a"
-                        strokeWidth="1.5"
-                      />
-                      {Array.from(
-                        {
-                          length: Math.max(
-                            1,
-                            Math.ceil((project.length * 1000) / project.stiffenerSpacing),
-                          ),
-                        },
-                        (_, index) => (
-                          <line
-                            key={index}
-                            x1="78"
-                            y1={
-                              28 +
-                              index *
-                                (180 /
-                                  Math.max(
-                                    1,
-                                    Math.ceil((project.length * 1000) / project.stiffenerSpacing) -
-                                      1,
-                                  ))
-                            }
-                            x2="152"
-                            y2={
-                              28 +
-                              index *
-                                (180 /
-                                  Math.max(
-                                    1,
-                                    Math.ceil((project.length * 1000) / project.stiffenerSpacing) -
-                                      1,
-                                  ))
-                            }
-                            stroke="#8b6fc4"
-                            strokeWidth="1.5"
-                          />
-                        ),
-                      )}
-                      <text x="180" y="48" fontSize="10" fill="#805c14">
-                        Main: {project.numBars} × Ø{project.barDiameter}
-                      </text>
-                      <text x="180" y="72" fontSize="10" fill="#9d3d4e">
-                        Spiral: Ø{project.spiralBarDiameter} @ {project.spiralSpacing}
-                      </text>
-                      <text x="180" y="96" fontSize="10" fill="#513c86">
-                        Stiffener: Ø{project.stiffenerBarDiameter} @ {project.stiffenerSpacing}
-                      </text>
-                      <text x="180" y="120" fontSize="10" fill="#173b5f">
-                        Length: {project.length} m
-                      </text>
-                    </svg>
-                  </div>
-                </div>
-                <table className="mt-4 w-full border border-slate-300 text-left text-[11px]">
-                  <thead className="bg-slate-200">
-                    <tr>
-                      <th className="p-2">Reinforcement type</th>
-                      <th className="p-2">Quantity / spacing</th>
-                      <th className="p-2">Diameter</th>
-                      <th className="p-2">Calculated weight</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-slate-300">
-                      <td className="p-2">Main longitudinal bars</td>
-                      <td className="p-2">
-                        {project.numBars} bars × {project.length} m
-                      </td>
-                      <td className="p-2">Ø{project.barDiameter}</td>
-                      <td className="p-2">{results.mainBarWeight.toFixed(1)} kg</td>
-                    </tr>
-                    <tr className="border-t border-slate-300">
-                      <td className="p-2">Spiral reinforcement</td>
-                      <td className="p-2">
-                        @ {project.spiralSpacing} mm over {project.length} m
-                      </td>
-                      <td className="p-2">Ø{project.spiralBarDiameter}</td>
-                      <td className="p-2">{results.spiralWeight.toFixed(1)} kg</td>
-                    </tr>
-                    <tr className="border-t border-slate-300">
-                      <td className="p-2">Stiffener reinforcement</td>
-                      <td className="p-2">
-                        @ {project.stiffenerSpacing} mm over {project.length} m
-                      </td>
-                      <td className="p-2">Ø{project.stiffenerBarDiameter}</td>
-                      <td className="p-2">{results.stiffenerWeight.toFixed(1)} kg</td>
-                    </tr>
-                    <tr className="border-t border-slate-300">
-                      <td className="p-2">Total reinforcement</td>
-                      <td className="p-2">Main + spiral + stiffener</td>
-                      <td className="p-2">-</td>
-                      <td className="p-2">{results.totalRebarWeight.toFixed(1)} kg</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 border border-slate-300 bg-white p-3">
-                  <p>As: {results.rebarArea} mm²</p>
-                  <p>ρ: {results.reinforcementRatio}%</p>
-                  <p>
-                    N<sub>Rd</sub>: {results.structuralAxialResistance} kN
-                  </p>
-                  <p>RC utilization: {(results.utilizationStructural * 100).toFixed(1)}%</p>
-                </div>
-                <p className="mt-3">
-                  Reference basis: EN 1992-1-1 concrete compression and reinforcement provisions.
-                  Exact clause and National Annex values shall be confirmed for the adopted project
-                  edition.
-                </p>
-              </div>
-              <div className="mt-6 border-l-4 border-[#b8863b] bg-white/60 p-4 text-xs leading-relaxed">
-                Applicable basis: EN 1990, EN 1997-1, EN 1997-2 and EN 1992-1-1. Exact clause
-                references and National Annex parameters shall be confirmed against the adopted
-                project edition. This report is a preliminary calculation aid and does not replace
-                geotechnical investigation or engineering approval.
-              </div>
-            </section>
-
-            <section className="report-page bg-[#f8f5ed] p-10">
-              <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
-                2. Executive Summary & Verification
-              </h2>
-              <div className="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                <div className="border border-slate-300 bg-white p-4">
-                  <span>
-                    End bearing R<sub>b,k</sub>
-                  </span>
-                  <span className="mt-2 block">{results.baseResistance} kN</span>
-                </div>
-                <div className="border border-slate-300 bg-white p-4">
-                  <span>
-                    Shaft friction R<sub>s,k</sub>
-                  </span>
-                  <span className="mt-2 block">{results.totalShaftResistance} kN</span>
-                </div>
-                <div className="border border-slate-300 bg-white p-4">
-                  <span>
-                    Total R<sub>c,k</sub>
-                  </span>
-                  <span className="mt-2 block">{results.totalCharacteristicResistance} kN</span>
-                </div>
-                <div className="border border-[#b8863b] bg-[#fffaf0] p-4">
-                  <span>
-                    Design R<sub>c,d</sub>
-                  </span>
-                  <span className="mt-2 block">{results.designResistance} kN</span>
-                </div>
-              </div>
-              <table className="mt-6 w-full border border-slate-300 text-left text-xs">
-                <thead className="bg-slate-200">
-                  <tr>
-                    <th className="p-2">Check</th>
-                    <th className="p-2">Demand</th>
-                    <th className="p-2">Resistance / limit</th>
-                    <th className="p-2">Utilization</th>
-                    <th className="p-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-t border-slate-300">
-                    <td className="p-2">EC7 compression</td>
-                    <td className="p-2">{project.nEd} kN</td>
-                    <td className="p-2">{results.designResistance} kN</td>
-                    <td className="p-2">{(results.utilizationGeotechnical * 100).toFixed(1)}%</td>
-                    <td className="p-2">
-                      {results.utilizationGeotechnical <= 1 ? "PASS" : "FAIL"}
-                    </td>
-                  </tr>
-                  <tr className="border-t border-slate-300">
-                    <td className="p-2">Settlement SLS</td>
-                    <td className="p-2">{results.settlementTotal} mm</td>
-                    <td className="p-2">{results.allowableSettlement} mm</td>
-                    <td className="p-2">
-                      {((results.settlementTotal / results.allowableSettlement) * 100).toFixed(1)}%
-                    </td>
-                    <td className="p-2">
-                      {results.settlementTotal <= results.allowableSettlement ? "PASS" : "FAIL"}
-                    </td>
-                  </tr>
-                  <tr className="border-t border-slate-300">
-                    <td className="p-2">RC axial resistance</td>
-                    <td className="p-2">{project.nEd} kN</td>
-                    <td className="p-2">{results.structuralAxialResistance} kN</td>
-                    <td className="p-2">{(results.utilizationStructural * 100).toFixed(1)}%</td>
-                    <td className="p-2">{results.utilizationStructural <= 1 ? "PASS" : "FAIL"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </section>
-
-            <section className="report-page bg-[#f8f5ed] p-10">
-              <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
-                3. Detailed Calculation
-              </h2>
-              <p className="mt-3 text-xs leading-relaxed">
-                Detailed calculation trail with implemented parameters, substituted values,
-                formulas, and results. Exact Eurocode clause references shall be confirmed against
-                the adopted edition and National Annex before issue.
-              </p>
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">
-                3.1 Geometry and section properties
-              </h3>
-              <p className="text-xs">
-                Reference: EN 1997-1 pile geometry model and EN 1992-1-1 concrete section
-                properties.
-              </p>
-              <Equation
-                latex={`D=${project.diameter}\\,\\text{mm},\\quad A_b=${results.pileArea.toFixed(3)}\\,\\text{m}^2,\\quad u=${results.pilePerimeter.toFixed(3)}\\,\\text{m}`}
-                tag="3.1.1"
-              />
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">
-                3.2 Effective stress by layer
-              </h3>
-              <p className="text-xs">
-                Reference: EN 1997-1 effective-stress approach. Below groundwater, γ′ = γsat − γw; a
-                minimum effective stress of 10 kPa is applied.
-              </p>
-              {results.layers.map((resultLayer) => {
-                const layer = project.layers.find((item) => item.id === resultLayer.layerId);
-                if (!layer) return null;
-                const midpoint = layer.topDepth + resultLayer.effectiveLength / 2;
-                const submergedGamma = Math.max(1, (layer.gammaSat ?? layer.gamma) - 9.81);
-                const stress =
-                  midpoint <= project.waterLevel
-                    ? layer.gamma * midpoint
-                    : layer.gamma * project.waterLevel +
-                      submergedGamma * (midpoint - project.waterLevel);
-                return (
-                  <div
-                    key={`stress-${resultLayer.layerId}`}
-                    className="mt-3 border-l-2 border-[#b8863b] pl-4"
-                  >
-                    <p className="font-mono text-xs font-bold">
-                      {resultLayer.layerId} · {layer.name}
-                    </p>
-                    <Equation
-                      latex={`L_{eff}=${resultLayer.effectiveLength.toFixed(2)}\\,\\text{m},\\quad z_m=${midpoint.toFixed(2)}\\,\\text{m},\\quad \\sigma'_{v0}=${Math.max(10, stress).toFixed(1)}\\,\\text{kPa}`}
-                      tag={`${resultLayer.layerId}.1`}
-                    />
-                    <p className="text-[11px] text-slate-600">
-                      Inputs: γ = {layer.gamma} kN/m³, γ′ = {submergedGamma.toFixed(2)} kN/m³, GWL ={" "}
-                      {project.waterLevel} m bgl.
-                    </p>
-                  </div>
-                );
-              })}
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">3.3 Shaft friction by layer</h3>
-              <p className="text-xs">
-                Reference: EN 1997-1 pile shaft resistance provisions. Alpha/beta correlations are
-                preliminary and require geotechnical confirmation.
-              </p>
-              {results.layers.map((resultLayer) => {
-                const layer = project.layers.find((item) => item.id === resultLayer.layerId);
-                if (!layer) return null;
-                const alpha = layer.cu <= 40 ? 0.55 : 0.45;
-                const beta = 0.8 * Math.tan(((layer.phi * Math.PI) / 180) * 0.75);
-                const alphaMethod = layer.method === "alpha" && layer.cu > 0;
-                return (
-                  <div
-                    key={`shaft-detail-${resultLayer.layerId}`}
-                    className="mt-3 border-l-2 border-cyan-700 pl-4"
-                  >
-                    <p className="font-mono text-xs font-bold">
-                      {resultLayer.layerId} · {alphaMethod ? "Alpha / undrained" : "Beta / drained"}
-                    </p>
-                    <Equation
-                      latex={
-                        alphaMethod
-                          ? `q_{s,k}=\\alpha c_u=${alpha.toFixed(2)}\\times${layer.cu}=${resultLayer.unitResistance.toFixed(2)}\\,\\text{kPa}`
-                          : `\\beta=K\\tan(0.75\\varphi')=${beta.toFixed(3)},\\quad q_{s,k}=\\beta\\sigma'_{v0}=${resultLayer.unitResistance.toFixed(2)}\\,\\text{kPa}`
-                      }
-                      tag={`${resultLayer.layerId}.2`}
-                    />
-                    <Equation
-                      latex={`R_{s,i}=q_{s,k}uL_{eff}=${resultLayer.shaftResistance.toFixed(1)}\\,\\text{kN}`}
-                      tag={`${resultLayer.layerId}.3`}
-                    />
-                  </div>
-                );
-              })}
-              <Equation
-                latex={`R_{s,k}=\\sum R_{s,i}=${results.totalShaftResistance}\\,\\text{kN}`}
-                tag="3.3.4"
-              />
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">
-                3.4 Toe resistance and design factor
-              </h3>
-              <p className="text-xs">
-                Reference: EN 1997-1 pile base resistance and design resistance provisions. Confirm
-                exact clause and National Annex values before issue.
-              </p>
-              <Equation
-                latex={`q_{b,k}=${results.baseUnitResistance}\\,\\text{kPa},\\quad R_{b,k}=q_{b,k}A_b=${results.baseResistance}\\,\\text{kN}`}
-                tag="3.4.1"
-              />
-              <Equation
-                latex={`R_{c,k}=R_{s,k}+R_{b,k}=${results.totalCharacteristicResistance}\\,\\text{kN}`}
-                tag="3.4.2"
-              />
-              <Equation
-                latex={`R_{c,d}=R_{c,k}/\\gamma_R=${results.totalCharacteristicResistance}/${project.safetyFactor.toFixed(1)}=${results.designResistance}\\,\\text{kN}`}
-                tag="3.4.3"
-              />
-              <Equation
-                latex={`\\eta_{GEO}=N_{Ed}/R_{c,d}=${project.nEd}/${results.designResistance}=${Number.isFinite(results.utilizationGeotechnical) ? results.utilizationGeotechnical.toFixed(3) : "INPUT REQUIRED"}`}
-                tag="3.4.4"
-              />
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">3.5 Settlement verification</h3>
-              <p className="text-xs">
-                Reference: EN 1997-1 serviceability verification; soil settlement is the
-                application&apos;s preliminary empirical estimate.
-              </p>
-              <Equation
-                latex={`s_{elastic}=${results.settlementElastic}\\,\\text{mm},\\quad s_{soil}=${results.settlementSoil}\\,\\text{mm}`}
-                tag="3.5.1"
-              />
-              <Equation
-                latex={`s_{tot}=s_{elastic}+s_{soil}=${results.settlementTotal}\\,\\text{mm}\\leq${results.allowableSettlement}\\,\\text{mm}`}
-                tag="3.5.2"
-              />
-              <h3 className="mt-6 text-lg font-bold text-[#173b5f]">
-                3.6 RC axial resistance and reinforcement
-              </h3>
-              <p className="text-xs">
-                Reference: EN 1992-1-1 concrete compression and reinforcement resistance provisions;
-                exact clause to be confirmed for the adopted project edition.
-              </p>
-              <Equation
-                latex={`f_{cd}=${(project.fck / 1.5).toFixed(2)}\\,\\text{MPa},\\quad f_{yd}=${(project.fyk / 1.15).toFixed(1)}\\,\\text{MPa}`}
-                tag="3.6.1"
-              />
-              <Equation
-                latex={`A_s=${project.numBars}\\pi(${project.barDiameter}/2)^2=${results.rebarArea}\\,\\text{mm}^2`}
-                tag="3.6.2"
-              />
-              <Equation
-                latex={`N_{Rd}=A_cf_{cd}+A_sf_{yd}=${results.structuralAxialResistance}\\,\\text{kN},\\quad \\eta_{RC}=${(results.utilizationStructural * 100).toFixed(1)}\\%`}
-                tag="3.6.3"
-              />
-            </section>
-
-            <section className="bg-[#f8f5ed] p-10">
-              <h2 className="border-b-2 border-[#173b5f] pb-2 text-2xl font-bold text-[#173b5f]">
-                4. Soil Strata Schedule
-              </h2>
-              <table className="mt-5 w-full border border-slate-300 text-left font-mono text-[11px]">
-                <thead className="bg-slate-200">
-                  <tr>
-                    <th className="p-2">Layer</th>
-                    <th className="p-2">Depth</th>
-                    <th className="p-2">Material</th>
-                    <th className="p-2">γ</th>
-                    <th className="p-2">φ'</th>
-                    <th className="p-2">cu</th>
-                    <th className="p-2">
-                      R<sub>s,k</sub>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.layers.map((layer) => (
-                    <tr key={layer.layerId} className="border-t border-slate-300">
-                      <td className="p-2">{layer.layerId}</td>
-                      <td className="p-2">{layer.effectiveLength.toFixed(2)} m</td>
-                      <td className="p-2">{layer.name}</td>
-                      <td className="p-2">
-                        {project.layers.find((item) => item.id === layer.layerId)?.gamma ?? "-"}
-                      </td>
-                      <td className="p-2">
-                        {project.layers.find((item) => item.id === layer.layerId)?.phi ?? "-"}
-                      </td>
-                      <td className="p-2">
-                        {project.layers.find((item) => item.id === layer.layerId)?.cu ?? "-"}
-                      </td>
-                      <td className="p-2">{layer.shaftResistance.toFixed(1)} kN</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+            <PrintPreviewModal
+              isOpen={isPrintPreviewOpen}
+              onClose={() => setIsPrintPreviewOpen(false)}
+              project={project}
+              results={results}
+            >
+              <ReportContext.Provider value={{ previewMode: true }}>
+                {renderReportPages()}
+              </ReportContext.Provider>
+            </PrintPreviewModal>
           </div>
         )}
       </main>

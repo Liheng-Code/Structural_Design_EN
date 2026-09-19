@@ -1,4 +1,4 @@
-import type { BoredPileProject, BoredPileAnalysisResult, LayerResistanceResult } from "./types";
+import type { BoredPileProject, BoredPileAnalysisResult, LayerResistanceResult, LayerSettlementResult } from "./types";
 
 export function defaultBoredPileProject(): BoredPileProject {
   return {
@@ -6,6 +6,8 @@ export function defaultBoredPileProject(): BoredPileProject {
     projectNumber: "BP-2026-EC7",
     client: "Structural & Geotechnical Consultants Ltd",
     designer: "Lead Geotechnical Engineer",
+    revision: "Rev. 01",
+    calculationDate: new Date().toISOString().split("T")[0],
     groundLevel: 0.0,
     waterLevel: 2.0,
     diameter: 800, // mm
@@ -25,6 +27,7 @@ export function defaultBoredPileProject(): BoredPileProject {
     spiralSpacing: 200, // mm
     stiffenerBarDiameter: 16, // mm
     stiffenerSpacing: 1500, // mm
+    exposureClass: "XC2",
     layers: [
       {
         id: "L1",
@@ -237,14 +240,55 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
     ? Math.round((proj.nEd / designResistance) * 1000) / 1000
     : Number.POSITIVE_INFINITY;
 
-  // Settlement estimates (Elastic compression + soil deformation)
-  // Pile elastic compression: delta_L = N * L / (A_c * E_c)
+  // Settlement estimates (Elastic compression + layer-by-layer soil deformation)
+  const serviceLoad = Math.round(proj.nEd * 0.7 * 10) / 10;
+  const layerSettlements: LayerSettlementResult[] = [];
+  let totalSoilSettlement = 0;
+
+  for (const layer of proj.layers) {
+    if (layer.topDepth >= pileLength + D * 2) continue;
+    const top = Math.max(0, layer.topDepth);
+    const bottom = Math.min(pileLength + D * 2, layer.bottomDepth);
+    const thickness = Math.max(0, bottom - top);
+    if (thickness <= 0) continue;
+
+    const midDepth = (top + bottom) / 2;
+    const stressInc = serviceLoad / (Math.PI * Math.pow(D / 2 + (midDepth / pileLength) * 0.4, 2));
+    const e50 = layer.e50 || (layer.type === "sand" ? 30000 : layer.type === "dense-sand" ? 50000 : 15000);
+
+    const immSettlement = (stressInc * thickness / e50) * 1000 * 0.35; // mm
+    
+    let conSettlement = 0;
+    if (layer.type === "clay" || layer.type === "stiff-clay" || layer.drainage === "undrained") {
+      const Cc = layer.compressionIndex || 0.25;
+      const e0 = layer.initialVoidRatio || 0.8;
+      const zWater = proj.waterLevel;
+      let sigmaV0 = midDepth <= zWater ? layer.gamma * midDepth : layer.gamma * zWater + Math.max(1, (layer.gammaSat ?? layer.gamma) - 9.81) * (midDepth - zWater);
+      sigmaV0 = Math.max(10, sigmaV0);
+      conSettlement = (Cc * thickness / (1 + e0)) * Math.log10((sigmaV0 + stressInc) / sigmaV0) * 1000;
+    }
+
+    const totalLayerSettlement = Math.round((immSettlement + conSettlement) * 10) / 10;
+    totalSoilSettlement += totalLayerSettlement;
+
+    layerSettlements.push({
+      layerId: layer.id,
+      name: layer.name,
+      soilType: layer.type,
+      thickness: Math.round(thickness * 10) / 10,
+      depthTop: top,
+      depthBottom: bottom,
+      modulus: e50,
+      immediateSettlement: Math.round(immSettlement * 10) / 10,
+      consolidationSettlement: Math.round(conSettlement * 10) / 10,
+      totalLayerSettlement,
+    });
+  }
+
   const Ec = 30000; // MPa -> 30,000,000 kN/m2 for C30/37
   const grossAreaM2 = pileArea;
-  const pileElasticSettlement = ((proj.nEd * proj.length) / (grossAreaM2 * Ec * 1000)) * 1000; // mm
-  const soilSettlement = totalCharacteristicResistance > 0
-    ? (proj.nEd / (totalCharacteristicResistance * 0.7)) * 4.5
-    : 0; // no soil profile means no calculable settlement
+  const pileElasticSettlement = ((serviceLoad * proj.length) / (grossAreaM2 * Ec * 1000)) * 1000; // mm
+  const soilSettlement = Math.round(totalSoilSettlement * 10) / 10;
   const settlementTotal = Math.round((pileElasticSettlement + soilSettlement) * 10) / 10;
   const allowableSettlement = 25.0; // mm
 
@@ -270,11 +314,36 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
   const stiffenerLength = stiffenerCount * Math.PI * cageDiameter;
   const stiffenerWeight = stiffenerLength * kgPerMetre(proj.stiffenerBarDiameter);
   const totalRebarWeight = mainBarWeight + spiralWeight + stiffenerWeight;
+  const steelRatioKgPerM3 = Math.round((totalRebarWeight / (pileArea * proj.length)) * 10) / 10;
+
+  // EC2 Checks (EN 1992-1-1)
+  const minReinforcementRatioPass = reinforcementRatio >= 0.2;
+  const maxReinforcementRatioPass = reinforcementRatio <= 4.0;
+  const minBarSizePass = proj.barDiameter >= 16;
+  const maxAllowedSpiralSpacing = Math.min(250, 12 * proj.barDiameter);
+  const spiralSpacingPass = proj.spiralSpacing <= maxAllowedSpiralSpacing;
+  
+  // Bending + Axial interaction (approximate check: N_Ed / N_Rd + M_Ed / M_Rd_approx <= 1.0)
+  const mRdApprox = structuralAxialResistance * (D * 0.15); // kNm approx bending capacity
+  const bendingInteractionRatio = Math.round(((proj.nEd / structuralAxialResistance) + (mRdApprox > 0 ? proj.mEd / mRdApprox : 0)) * 1000) / 1000;
 
   let overallStatus: "PASS" | "FAIL" | "WARNING" = "PASS";
-  if (utilizationGeotechnical > 1.0 || utilizationStructural > 1.0 || settlementTotal > allowableSettlement) {
+  if (
+    utilizationGeotechnical > 1.0 ||
+    utilizationStructural > 1.0 ||
+    settlementTotal > allowableSettlement ||
+    !minReinforcementRatioPass ||
+    !maxReinforcementRatioPass ||
+    !minBarSizePass ||
+    bendingInteractionRatio > 1.0
+  ) {
     overallStatus = "FAIL";
-  } else if (utilizationGeotechnical > 0.85 || utilizationStructural > 0.85) {
+  } else if (
+    utilizationGeotechnical > 0.85 ||
+    utilizationStructural > 0.85 ||
+    bendingInteractionRatio > 0.85 ||
+    !spiralSpacingPass
+  ) {
     overallStatus = "WARNING";
   }
 
@@ -282,6 +351,8 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
     pileArea,
     pilePerimeter,
     layers: resultsLayers,
+    layerSettlements,
+    serviceLoad,
     totalShaftResistance: Math.round(totalShaft * 10) / 10,
     baseUnitResistance: Math.round(baseUnitResistance * 10) / 10,
     baseResistance: Math.round(baseResistance * 10) / 10,
@@ -301,6 +372,19 @@ export function analyzeBoredPile(proj: BoredPileProject): BoredPileAnalysisResul
     spiralWeight: Math.round(spiralWeight * 10) / 10,
     stiffenerWeight: Math.round(stiffenerWeight * 10) / 10,
     totalRebarWeight: Math.round(totalRebarWeight * 10) / 10,
+    steelRatioKgPerM3,
+    minReinforcementRatioPass,
+    maxReinforcementRatioPass,
+    minBarSizePass,
+    spiralSpacingPass,
+    bendingInteractionRatio,
+    designAxialLoad: proj.nEd,
+    utilization: utilizationGeotechnical,
+    structuralInteraction: bendingInteractionRatio,
+    totalBaseResistance: Math.round(baseResistance * 10) / 10,
+    characteristicResistance: totalCharacteristicResistance,
+    maxLateralDeflection: Math.round((proj.mEd / 100) * 10) / 10,
+    reinforcementArea: Math.round(rebarArea),
     overallStatus,
   };
 }

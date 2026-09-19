@@ -1,9 +1,36 @@
+import { useState, useMemo } from "react";
 import { Button, Card, Field, NumInput, Select, TextInput } from "@/components/ui";
 import { defaultProject, DESIGN_TYPE_LABEL, SECTION_LIBRARY, TIE_DIAMETERS } from "@/lib/engine/defaults";
 import { cbpSolidRatio } from "@/lib/engine/cbp-section";
-import type { DesignApproach, DesignType, EarthMethod, RetainingWallSystem, StructuralModel, TrafficModel } from "@/lib/engine/types";
+import type { DesignApproach, DesignType, EarthMethod, RetainingWallSystem, StructuralModel, TrafficModel, PorePressureMode } from "@/lib/engine/types";
+import { computeLayerPorePressure } from "@/lib/engine/calculate";
 import { useProject } from "@/lib/store";
 import { uid } from "@/lib/utils";
+import {
+  SoilProfileVisualizer,
+  getSoilMaterialStyle,
+  SOIL_ARCHETYPES,
+} from "@/components/SoilProfileVisualizer";
+import { GeometryLoadsPanel } from "@/components/retaining-wall/GeometryLoadsPanel";
+import {
+  Sparkles,
+  Plus,
+  Trash2,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  Table as TableIcon,
+  Columns3,
+  Info,
+  GripVertical,
+  Droplets,
+  Waves,
+  Minimize2,
+  Search,
+  X,
+  Filter,
+} from "lucide-react";
 
 export function ProjectPanel() {
   const p = useProject((s) => s.project);
@@ -97,52 +124,192 @@ export function DesignPanel() {
 }
 
 export function GeometryPanel() {
-  const p = useProject((s) => s.project);
-  const patch = useProject((s) => s.patch);
-  const g = p.geometry;
-  return (
-    <Card title="Geometry">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Retained height H" unit="m" source="USER INPUT">
-          <NumInput value={g.retainedHeight} onChange={(n) => patch((q) => (q.geometry.retainedHeight = n))} />
-        </Field>
-        <Field label="Embedment D" unit="m" source="USER INPUT">
-          <NumInput value={g.embedment} onChange={(n) => patch((q) => (q.geometry.embedment = n))} />
-        </Field>
-        <Field label="Total length L" unit="m" source="DERIVED">
-          <NumInput value={g.retainedHeight + g.embedment} onChange={() => {}} disabled />
-        </Field>
-        <Field label="Road width" unit="m">
-          <NumInput value={g.roadWidth} onChange={(n) => patch((q) => (q.geometry.roadWidth = n))} />
-        </Field>
-        <Field label="Out-to-out width" unit="m">
-          <NumInput value={g.totalWidth} onChange={(n) => patch((q) => (q.geometry.totalWidth = n))} />
-        </Field>
-        <Field label="Wall thickness t" unit="m">
-          <NumInput step={0.01} value={g.wallThickness} onChange={(n) => patch((q) => (q.geometry.wallThickness = n))} />
-        </Field>
-        <Field label="Riverbed elevation" unit="m">
-          <NumInput value={g.riverbed} onChange={(n) => patch((q) => (q.geometry.riverbed = n))} />
-        </Field>
-        <Field label="D min (auto)" unit="m">
-          <NumInput value={g.dMin} onChange={(n) => patch((q) => (q.geometry.dMin = n))} />
-        </Field>
-        <Field label="D max (auto)" unit="m">
-          <NumInput value={g.dMax} onChange={(n) => patch((q) => (q.geometry.dMax = n))} />
-        </Field>
-        <Field label="D step" unit="m">
-          <NumInput step={0.05} value={g.dStep} onChange={(n) => patch((q) => (q.geometry.dStep = n))} />
-        </Field>
-      </div>
-    </Card>
-  );
+  return <GeometryLoadsPanel />;
 }
 
 export function SoilPanel() {
   const p = useProject((s) => s.project);
   const patch = useProject((s) => s.patch);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
+  const [layoutMode, setLayoutMode] = useState<"split" | "profile" | "table">("split");
+  const [isCompact, setIsCompact] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedMaterialFilter, setSelectedMaterialFilter] = useState<string>("all");
+
+  const isFilterActive = Boolean(searchQuery.trim() || (selectedMaterialFilter && selectedMaterialFilter !== "all"));
+
+  const materialCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: p.nativeLayers.length };
+    const categories = ["clay", "sand", "gravel", "silt", "rock", "fill"];
+    categories.forEach((cat) => {
+      counts[cat] = p.nativeLayers.filter((l) => {
+        const s = `${l.soilType || ""} ${l.name || ""} ${l.description || ""}`.toLowerCase();
+        return s.includes(cat);
+      }).length;
+    });
+    return counts;
+  }, [p.nativeLayers]);
+
+  const filteredLayersWithIndex = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return p.nativeLayers
+      .map((layer, origIndex) => ({ layer, origIndex }))
+      .filter(({ layer }) => {
+        // Material category chip
+        if (selectedMaterialFilter && selectedMaterialFilter !== "all") {
+          const mat = (layer.soilType || "").toLowerCase();
+          const name = (layer.name || "").toLowerCase();
+          const desc = (layer.description || "").toLowerCase();
+          const target = selectedMaterialFilter.toLowerCase();
+          if (!mat.includes(target) && !name.includes(target) && !desc.includes(target)) {
+            return false;
+          }
+        }
+
+        // Search text query
+        if (!query) return true;
+        const nameMatch = layer.name.toLowerCase().includes(query);
+        const matMatch = (layer.soilType || "").toLowerCase().includes(query);
+        const descMatch = (layer.description || "").toLowerCase().includes(query);
+        const drainageMatch = (layer.drainage || "").toLowerCase().includes(query);
+        return nameMatch || matMatch || descMatch || drainageMatch;
+      });
+  }, [p.nativeLayers, searchQuery, selectedMaterialFilter]);
+
+  const waterLevel = p.water?.gwlNative ?? p.water?.dryDown ?? 0;
+  const embedment = p.geometry?.embedment ?? 6;
+  const riverbed = p.geometry?.riverbed ?? 0;
+  const toeLevel = riverbed - embedment;
+
+  const handleAutoAlign = () => {
+    patch((q) => {
+      for (let i = 0; i < q.nativeLayers.length - 1; i++) {
+        q.nativeLayers[i + 1]!.zTop = q.nativeLayers[i]!.zBot;
+      }
+    });
+  };
+
+  const handleAddLayer = () => {
+    patch((q) => {
+      const last = q.nativeLayers.at(-1);
+      const top = last?.zBot ?? 0;
+      q.nativeLayers.push({
+        id: uid("nat"),
+        name: `Layer ${q.nativeLayers.length + 1}`,
+        description: "New stratum",
+        zTop: top,
+        zBot: top - 3,
+        gamma: 18,
+        gammaSat: 20,
+        phi: 30,
+        c: 0,
+        cu: 0,
+        E: 20000,
+        nu: 0.3,
+        kPerm: 1e-5,
+        OCR: 1,
+        sptN: 10,
+        drainage: "drained",
+        soilType: "alluvium",
+      });
+    });
+  };
+
+  const handleRemoveLayer = (index: number) => {
+    if (p.nativeLayers.length <= 1) return;
+    patch((q) => {
+      q.nativeLayers.splice(index, 1);
+    });
+  };
+
+  const handleReorderLayer = (from: number, to: number, autoRestack: boolean = true) => {
+    if (to < 0 || to >= p.nativeLayers.length || from === to) return;
+    patch((q) => {
+      const list = [...q.nativeLayers];
+      const [item] = list.splice(from, 1);
+      if (!item) return;
+      list.splice(to, 0, item);
+      if (autoRestack) {
+        const topElevation = q.nativeLayers[0]?.zTop ?? 0;
+        let currentZ = topElevation;
+        for (const layer of list) {
+          const thickness = Math.max(0.1, layer.zTop - layer.zBot);
+          layer.zTop = Number(currentZ.toFixed(2));
+          currentZ -= thickness;
+          layer.zBot = Number(currentZ.toFixed(2));
+        }
+      }
+      q.nativeLayers = list;
+    });
+  };
+
+  const [tableDragIdx, setTableDragIdx] = useState<number | null>(null);
+  const [tableDragOverIdx, setTableDragOverIdx] = useState<number | null>(null);
+  const [tableDropPos, setTableDropPos] = useState<"before" | "after" | null>(null);
+
+  const handleTableDrop = (targetIdx: number) => {
+    if (tableDragIdx === null || tableDragIdx === targetIdx) return;
+    let finalTarget = tableDropPos === "before" ? targetIdx : targetIdx + 1;
+    if (tableDragIdx < finalTarget) {
+      finalTarget -= 1;
+    }
+    if (finalTarget >= 0 && finalTarget < p.nativeLayers.length && finalTarget !== tableDragIdx) {
+      handleReorderLayer(tableDragIdx, finalTarget, true);
+    }
+    setTableDragIdx(null);
+    setTableDragOverIdx(null);
+    setTableDropPos(null);
+  };
+
+  const handleDuplicateLayer = (index: number) => {
+    patch((q) => {
+      const src = q.nativeLayers[index];
+      if (!src) return;
+      const thickness = Math.max(0.5, src.zTop - src.zBot);
+      const last = q.nativeLayers.at(-1);
+      const newTop = last ? last.zBot : src.zBot;
+      q.nativeLayers.push({
+        ...structuredClone(src),
+        id: uid("nat"),
+        name: `${src.name} (Copy)`,
+        zTop: newTop,
+        zBot: newTop - thickness,
+      });
+    });
+  };
+
+  const handleApplyPreset = (presetKey: string) => {
+    const arch = SOIL_ARCHETYPES.find((a) => a.key === presetKey);
+    if (!arch) return;
+    patch((q) => {
+      const last = q.nativeLayers.at(-1);
+      const top = last?.zBot ?? 0;
+      q.nativeLayers.push({
+        id: uid("nat"),
+        name: arch.soilType,
+        description: arch.description,
+        zTop: top,
+        zBot: top - 3,
+        gamma: arch.gamma,
+        gammaSat: arch.gammaSat,
+        phi: arch.phi,
+        c: arch.c,
+        cu: arch.cu,
+        E: arch.E,
+        nu: 0.3,
+        kPerm: 1e-5,
+        OCR: 1,
+        sptN: arch.sptN,
+        drainage: arch.drainage,
+        soilType: arch.type,
+      });
+    });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Core granular fill card */}
       <Card title="Core granular fill (inside U)">
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Description">
@@ -168,85 +335,724 @@ export function SoilPanel() {
           Core self-weight is used as a stabilising action on the U-block. It is not treated as a rigid diaphragm.
         </p>
       </Card>
-      <Card
-        title="Native soil layers"
-        action={
-          <Button
-            variant="outline"
-            onClick={() =>
-              patch((q) =>
-                q.nativeLayers.push({
-                  id: uid("nat"),
-                  name: "New layer",
-                  description: "",
-                  zTop: q.nativeLayers.at(-1)?.zBot ?? 0,
-                  zBot: (q.nativeLayers.at(-1)?.zBot ?? 0) - 3,
-                  gamma: 18,
-                  gammaSat: 20,
-                  phi: 30,
-                  c: 0,
-                  cu: 0,
-                  E: 20000,
-                  nu: 0.3,
-                  kPerm: 1e-5,
-                  OCR: 1,
-                  sptN: 10,
-                  drainage: "drained",
-                  soilType: "alluvium",
-                }),
-              )
-            }
-          >
-            Add layer
-          </Button>
-        }
-      >
-        <div className="overflow-x-auto">
-          <table className="eng-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th className="num">z top</th>
-                <th className="num">z bot</th>
-                <th className="num">γ</th>
-                <th className="num">γsat</th>
-                <th className="num">φ'</th>
-                <th className="num">c'</th>
-                <th className="num">E</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.nativeLayers.map((L, i) => (
-                <tr key={L.id}>
-                  <td>
-                    <TextInput value={L.name} onChange={(e) => patch((q) => (q.nativeLayers[i]!.name = e.target.value))} />
-                  </td>
-                  {(["zTop", "zBot", "gamma", "gammaSat", "phi", "c", "E"] as const).map((k) => (
-                    <td key={k}>
-                      <NumInput
-                        step={k === "E" ? 1000 : 0.1}
-                        value={L[k]}
-                        onChange={(n) =>
-                          patch((q) => {
-                            q.nativeLayers[i]![k] = n;
-                          })
-                        }
-                      />
-                    </td>
-                  ))}
-                  <td>
-                    <Button variant="ghost" onClick={() => patch((q) => q.nativeLayers.splice(i, 1))}>
-                      Remove
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+      {/* Main Native Soil Layers Section with Visual Profile */}
+      <div className="space-y-4">
+        {/* Search & Filter Toolbar for Stratigraphy Layers */}
+        <div className="bg-paper p-3.5 rounded-md border border-rule shadow-xs space-y-2.5">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Search Input Bar */}
+            <div className="relative flex-1 min-w-[260px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted pointer-events-none" />
+              <input
+                type="text"
+                id="soil-strata-search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search soil layers by name, description, material type (e.g. clay, sand, gravel, silt, rock)..."
+                className="w-full pl-9 pr-8 py-1.5 text-xs rounded-sm border border-rule bg-panel text-ink placeholder:text-muted focus:outline-hidden focus:border-navy focus:ring-1 focus:ring-navy transition font-sans"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  id="clear-soil-search-btn"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted hover:text-ink transition cursor-pointer"
+                  title="Clear search query"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Status Badge and Reset Action */}
+            <div className="flex items-center gap-2.5 text-xs shrink-0 justify-between md:justify-end">
+              <span className="text-muted font-mono text-[11px]">
+                {isFilterActive ? (
+                  <span className="inline-flex items-center gap-1.5 text-navy font-semibold">
+                    <Filter className="size-3.5 text-accent" />
+                    <span>
+                      Showing {filteredLayersWithIndex.length} of {p.nativeLayers.length} strata
+                    </span>
+                  </span>
+                ) : (
+                  <span>{p.nativeLayers.length} total strata</span>
+                )}
+              </span>
+
+              {isFilterActive && (
+                <button
+                  type="button"
+                  id="reset-soil-filters-btn"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedMaterialFilter("all");
+                  }}
+                  className="px-2 py-0.5 rounded text-[11px] font-medium text-accent hover:bg-paper-2 border border-rule transition cursor-pointer"
+                  title="Reset search and material filters"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Material Filter Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-rule/60 text-xs">
+            <span className="text-[11px] font-medium text-muted mr-1 flex items-center gap-1">
+              <Filter className="size-3" />
+              <span>Material Filter:</span>
+            </span>
+            {[
+              { key: "all", label: "All Materials" },
+              { key: "clay", label: "Clay" },
+              { key: "sand", label: "Sand" },
+              { key: "gravel", label: "Gravel" },
+              { key: "silt", label: "Silt" },
+              { key: "rock", label: "Rock" },
+              { key: "fill", label: "Fill" },
+            ].map((mat) => {
+              const count = materialCounts[mat.key] ?? 0;
+              const isActive = selectedMaterialFilter === mat.key;
+              return (
+                <button
+                  key={mat.key}
+                  type="button"
+                  id={`soil-filter-chip-${mat.key}`}
+                  onClick={() => {
+                    setSelectedMaterialFilter(isActive && mat.key !== "all" ? "all" : mat.key);
+                  }}
+                  className={`px-2.5 py-0.5 rounded-sm text-[11px] font-medium transition cursor-pointer border ${
+                    isActive
+                      ? "bg-navy text-paper border-navy shadow-xs"
+                      : count > 0
+                        ? "bg-panel text-ink border-rule hover:bg-paper-2 hover:border-muted"
+                        : "bg-panel/50 text-muted border-rule/50 hover:bg-paper-2"
+                  }`}
+                  title={`Filter strata containing '${mat.label}'`}
+                >
+                  <span>{mat.label}</span>
+                  {mat.key !== "all" && count > 0 && (
+                    <span
+                      className={`ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-mono ${
+                        isActive ? "bg-paper/20 text-paper" : "bg-paper-2 text-muted"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <p className="mt-3 text-xs text-muted">Layer colours in the section are tied to this ordered ground model. Check that layer boundaries are continuous and cover the wall toe before relying on any pressure result.</p>
-      </Card>
+
+        {/* Layout Mode & Fast Actions Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-paper-2 p-3 rounded-md border border-rule">
+          <div className="flex items-center gap-2">
+            <Layers className="size-4 text-navy" />
+            <span className="text-sm font-semibold text-navy uppercase tracking-wider font-display">
+              Native Ground Stratigraphy Model
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-sm bg-panel border border-rule text-muted font-mono">
+              {p.nativeLayers.length} Strata
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* View Mode Switcher */}
+            <div className="inline-flex rounded-sm border border-rule bg-panel p-0.5 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setLayoutMode("split")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xs transition ${
+                  layoutMode === "split" ? "bg-navy text-paper" : "text-muted hover:text-ink"
+                }`}
+              >
+                <Columns3 className="size-3.5" />
+                <span>Split View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode("profile")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xs transition ${
+                  layoutMode === "profile" ? "bg-navy text-paper" : "text-muted hover:text-ink"
+                }`}
+              >
+                <Layers className="size-3.5" />
+                <span>Visual Profile</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode("table")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xs transition ${
+                  layoutMode === "table" ? "bg-navy text-paper" : "text-muted hover:text-ink"
+                }`}
+              >
+                <TableIcon className="size-3.5" />
+                <span>Data Table</span>
+              </button>
+            </div>
+
+            {/* Compact Toggle Button */}
+            <Button
+              variant={isCompact ? "primary" : "outline"}
+              onClick={() => setIsCompact(!isCompact)}
+              className="text-xs"
+              title={
+                isCompact
+                  ? "Compact view active: optional pore pressure and groundwater settings are hidden for a cleaner stratigraphy overview. Click to expand."
+                  : "Toggle compact view to hide optional pore pressure and groundwater settings for a cleaner stratigraphy overview."
+              }
+            >
+              <Minimize2 className="size-3.5 mr-1" />
+              <span>Compact</span>
+            </Button>
+
+            {/* Auto-Align Button */}
+            <Button
+              variant="outline"
+              onClick={handleAutoAlign}
+              className="text-xs"
+              title="Ensure layer boundaries connect without gaps or overlaps"
+            >
+              <Sparkles className="size-3.5 text-accent mr-1" />
+              <span>Auto-Align Boundaries</span>
+            </Button>
+
+            {/* Add Layer Button */}
+            <Button variant="primary" onClick={handleAddLayer} className="text-xs">
+              <Plus className="size-3.5 mr-1" />
+              <span>Add Layer</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Dynamic Layout: Split, Profile, or Table */}
+        <div
+          className={`grid gap-6 items-start ${
+            layoutMode === "split"
+              ? "grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(380px,1fr)]"
+              : "grid-cols-1"
+          }`}
+        >
+          {/* Table / Input Section */}
+          {(layoutMode === "split" || layoutMode === "table") && (
+            <Card
+              title="Soil Strata Parameter Table"
+              action={
+                <div className="flex items-center gap-2 text-xs font-mono">
+                  {isFilterActive && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 border border-amber-500/20 text-[11px] font-semibold">
+                      Filtered ({filteredLayersWithIndex.length}/{p.nativeLayers.length})
+                    </span>
+                  )}
+                  <span className="text-muted">
+                    {isCompact ? "Compact mode active · " : ""}Elevations in meters relative to datum
+                  </span>
+                </div>
+              }
+              className="overflow-hidden"
+            >
+              <div className="overflow-x-auto">
+                <table className="eng-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="w-8 text-center" title="Drag & drop to reorder stratigraphy sequence">
+                        <GripVertical className="size-3.5 mx-auto text-muted" />
+                      </th>
+                      <th className="w-10 text-center">Color</th>
+                      <th>Stratum Name</th>
+                      <th className="num">z top (m)</th>
+                      <th className="num">z bot (m)</th>
+                      <th className="num">Δz (m)</th>
+                      <th className="num">γ (kN/m³)</th>
+                      <th className="num">γsat</th>
+                      <th className="num">φ' (°)</th>
+                      <th className="num">c' (kPa)</th>
+                      <th className="num">E (kPa)</th>
+                      {!isCompact && (
+                        <>
+                          <th className="text-center whitespace-nowrap" title="Stratum-specific phreatic water table (perched/aquifer)">
+                            <div className="flex items-center justify-center gap-1">
+                              <Droplets className="size-3 text-sky-600" />
+                              <span>GWL (m)</span>
+                            </div>
+                          </th>
+                          <th className="whitespace-nowrap" title="Pore water pressure distribution mode and parameters">
+                            <div className="flex items-center gap-1">
+                              <Waves className="size-3 text-indigo-600" />
+                              <span>Pore Water Pressure (u)</span>
+                            </div>
+                          </th>
+                        </>
+                      )}
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLayersWithIndex.length === 0 ? (
+                      <tr>
+                        <td colSpan={isCompact ? 11 : 13} className="py-8 text-center bg-paper-2">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Search className="size-6 text-muted" />
+                            <p className="text-sm font-semibold text-ink">
+                              No strata match "{searchQuery || selectedMaterialFilter}"
+                            </p>
+                            <p className="text-xs text-muted max-w-sm">
+                              No soil strata in the stratigraphy model match your search query or material type filter.
+                            </p>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setSearchQuery("");
+                                setSelectedMaterialFilter("all");
+                              }}
+                              className="text-xs mt-1"
+                            >
+                              Clear Search Filter
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredLayersWithIndex.map(({ layer: L, origIndex: i }) => {
+                        const isSelected = selectedLayerId === L.id;
+                        const isHovered = hoveredLayerId === L.id;
+                        const thickness = L.zTop - L.zBot;
+                        const style = getSoilMaterialStyle(L, i);
+
+                        return (
+                          <tr
+                            key={L.id}
+                            draggable={!isFilterActive}
+                            onDragStart={(e) => {
+                              if (isFilterActive) return;
+                              e.dataTransfer.setData("text/plain", i.toString());
+                              e.dataTransfer.effectAllowed = "move";
+                              setTableDragIdx(i);
+                            }}
+                            onDragOver={(e) => {
+                              if (isFilterActive) return;
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                              if (tableDragIdx === null || tableDragIdx === i) return;
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const pos = (e.clientY - rect.top) < rect.height / 2 ? "before" : "after";
+                              if (tableDragOverIdx !== i || tableDropPos !== pos) {
+                                setTableDragOverIdx(i);
+                                setTableDropPos(pos);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              if (isFilterActive) return;
+                              e.preventDefault();
+                              handleTableDrop(i);
+                            }}
+                            onDragEnd={() => {
+                              setTableDragIdx(null);
+                              setTableDragOverIdx(null);
+                              setTableDropPos(null);
+                            }}
+                            onClick={() => setSelectedLayerId(L.id)}
+                            onMouseEnter={() => setHoveredLayerId(L.id)}
+                            onMouseLeave={() => setHoveredLayerId(null)}
+                            className={`cursor-pointer transition-colors relative ${
+                              tableDragIdx === i
+                                ? "opacity-35 bg-paper-2"
+                                : isSelected
+                                  ? "bg-paper-2 font-medium"
+                                  : isHovered
+                                    ? "bg-panel"
+                                    : ""
+                            }`}
+                          >
+                            {/* Drag handle column */}
+                            <td
+                              className={`text-center ${
+                                isFilterActive
+                                  ? "opacity-30 cursor-not-allowed"
+                                  : "cursor-grab active:cursor-grabbing text-muted hover:text-navy"
+                              }`}
+                              title={
+                                isFilterActive
+                                  ? "Clear search filter to reorder stratigraphy sequence"
+                                  : "Click and drag to change stratigraphy order"
+                              }
+                            >
+                              <GripVertical className="size-3.5 mx-auto" />
+                            </td>
+
+                          {/* Color block swatch matching the visual profile */}
+                          <td className="text-center">
+                            <div
+                              className="size-5 mx-auto rounded-xs border shadow-xs"
+                              style={{ backgroundColor: style.fill, borderColor: style.stroke }}
+                              title={`Stratum #${i + 1} material swatch`}
+                            />
+                          </td>
+
+                          {/* Stratum Name Input */}
+                          <td>
+                            <TextInput
+                              value={L.name}
+                              onChange={(e) =>
+                                patch((q) => (q.nativeLayers[i]!.name = e.target.value))
+                              }
+                              className="w-full text-xs font-semibold"
+                            />
+                          </td>
+
+                          {/* zTop */}
+                          <td className="num">
+                            <NumInput
+                              step={0.1}
+                              value={L.zTop}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.zTop = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* zBot */}
+                          <td className="num">
+                            <NumInput
+                              step={0.1}
+                              value={L.zBot}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.zBot = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* Thickness computed */}
+                          <td className="num font-mono text-xs font-semibold text-navy">
+                            {thickness.toFixed(2)}
+                          </td>
+
+                          {/* gamma */}
+                          <td className="num">
+                            <NumInput
+                              step={0.1}
+                              value={L.gamma}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.gamma = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* gammaSat */}
+                          <td className="num">
+                            <NumInput
+                              step={0.1}
+                              value={L.gammaSat}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.gammaSat = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* phi */}
+                          <td className="num">
+                            <NumInput
+                              step={0.5}
+                              value={L.phi}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.phi = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* c */}
+                          <td className="num">
+                            <NumInput
+                              step={1}
+                              value={L.c}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.c = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {/* E */}
+                          <td className="num">
+                            <NumInput
+                              step={1000}
+                              value={L.E}
+                              onChange={(n) =>
+                                patch((q) => {
+                                  q.nativeLayers[i]!.E = n;
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </td>
+
+                          {!isCompact && (
+                            <>
+                              {/* Stratum-specific Groundwater Table (GWL) */}
+                              <td className="text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!L.hasWaterTable}
+                                    title={
+                                      L.hasWaterTable
+                                        ? "Stratum-specific water table active (uncheck to revert to global water level)"
+                                        : "Check to define a localized/perched groundwater table for this stratum"
+                                    }
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      patch((q) => {
+                                        const lyr = q.nativeLayers[i]!;
+                                        lyr.hasWaterTable = checked;
+                                        if (checked && lyr.waterTable === undefined) {
+                                          lyr.waterTable = Number(((lyr.zTop + lyr.zBot) / 2).toFixed(2));
+                                        }
+                                      });
+                                    }}
+                                    className="size-3.5 rounded border-rule text-navy cursor-pointer"
+                                  />
+                                  {L.hasWaterTable ? (
+                                    <NumInput
+                                      step={0.1}
+                                      value={L.waterTable ?? L.zTop}
+                                      onChange={(n) =>
+                                        patch((q) => {
+                                          q.nativeLayers[i]!.waterTable = n;
+                                        })
+                                      }
+                                      className="w-16 text-xs font-mono"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="text-[10px] text-muted font-mono"
+                                      title="Using global groundwater level"
+                                    >
+                                      {p.waterLevel !== undefined ? `${p.waterLevel.toFixed(1)}m` : "Dry"}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Pore Water Pressure (u) Mode & Controls */}
+                              <td className="whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={L.porePressureMode ?? "hydrostatic"}
+                                    onChange={(e) => {
+                                      const mode = e.target.value as PorePressureMode;
+                                      patch((q) => {
+                                        const lyr = q.nativeLayers[i]!;
+                                        lyr.porePressureMode = mode;
+                                        if (mode === "user-defined" && lyr.porePressure === undefined) lyr.porePressure = 30;
+                                        if (mode === "ru" && lyr.ru === undefined) lyr.ru = 0.25;
+                                        if (mode === "piezometric" && lyr.piezometricHead === undefined) lyr.piezometricHead = lyr.zTop + 1;
+                                      });
+                                    }}
+                                    className="text-[11px] px-1.5 py-0.5 rounded border border-rule bg-paper text-navy font-medium"
+                                  >
+                                    <option value="hydrostatic">Hydrostatic</option>
+                                    <option value="piezometric">Piezometric (hp)</option>
+                                    <option value="user-defined">User u</option>
+                                    <option value="ru">ru ratio</option>
+                                    <option value="zero">Zero / Dry</option>
+                                  </select>
+
+                                  {/* Dynamic Parameter Field */}
+                                  {L.porePressureMode === "user-defined" && (
+                                    <NumInput
+                                      step={5}
+                                      min={0}
+                                      value={L.porePressure ?? 30}
+                                      onChange={(n) =>
+                                        patch((q) => {
+                                          q.nativeLayers[i]!.porePressure = n;
+                                        })
+                                      }
+                                      className="w-14 text-xs font-mono"
+                                      title="Target pore pressure at stratum base (kPa)"
+                                    />
+                                  )}
+                                  {L.porePressureMode === "ru" && (
+                                    <NumInput
+                                      step={0.05}
+                                      min={0}
+                                      max={0.8}
+                                      value={L.ru ?? 0.25}
+                                      onChange={(n) =>
+                                        patch((q) => {
+                                          q.nativeLayers[i]!.ru = n;
+                                        })
+                                      }
+                                      className="w-14 text-xs font-mono"
+                                      title="Pore pressure ratio ru = u / σv"
+                                    />
+                                  )}
+                                  {L.porePressureMode === "piezometric" && (
+                                    <NumInput
+                                      step={0.2}
+                                      value={L.piezometricHead ?? L.zTop + 1}
+                                      onChange={(n) =>
+                                        patch((q) => {
+                                          q.nativeLayers[i]!.piezometricHead = n;
+                                        })
+                                      }
+                                      className="w-14 text-xs font-mono"
+                                      title="Piezometric head elevation hp (m)"
+                                    />
+                                  )}
+
+                                  {/* Computed base pore pressure indicator badge */}
+                                  <span
+                                    className="text-[10px] font-mono px-1 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200"
+                                    title="Computed pore water pressure u at stratum base"
+                                  >
+                                    {computeLayerPorePressure(p.nativeLayers, L.zBot, p.waterLevel ?? 0, 9.81).toFixed(0)}k
+                                  </span>
+                                </div>
+                              </td>
+                            </>
+                          )}
+
+                          {/* Row Actions: Reorder, Copy, Delete */}
+                          <td className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                title={isFilterActive ? "Clear search filter to reorder" : "Move stratum up"}
+                                disabled={isFilterActive || i === 0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReorderLayer(i, i - 1);
+                                }}
+                                className="p-1 rounded text-muted hover:text-navy disabled:opacity-30"
+                              >
+                                <ArrowUp className="size-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title={isFilterActive ? "Clear search filter to reorder" : "Move stratum down"}
+                                disabled={isFilterActive || i === p.nativeLayers.length - 1}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReorderLayer(i, i + 1);
+                                }}
+                                className="p-1 rounded text-muted hover:text-navy disabled:opacity-30"
+                              >
+                                <ArrowDown className="size-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Duplicate stratum"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicateLayer(i);
+                                }}
+                                className="p-1 rounded text-muted hover:text-accent"
+                              >
+                                <Copy className="size-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Remove stratum"
+                                disabled={p.nativeLayers.length <= 1}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveLayer(i);
+                                }}
+                                className="p-1 rounded text-fail hover:opacity-80 disabled:opacity-30"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Archetype Presets Shortcuts */}
+              <div className="mt-4 pt-3 border-t border-rule flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-1.5 text-muted">
+                  <Info className="size-3.5" />
+                  <span>Insert typical geotechnical stratum preset:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {SOIL_ARCHETYPES.map((arch) => (
+                    <button
+                      key={arch.key}
+                      type="button"
+                      onClick={() => handleApplyPreset(arch.key)}
+                      className="px-2 py-1 rounded-sm border border-rule bg-panel text-[11px] font-medium text-navy hover:bg-paper-2 transition"
+                    >
+                      + {arch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-muted">
+                Layer colours in the section are tied to this ordered ground model. Check that layer boundaries are continuous and cover the wall toe before relying on any pressure result.
+              </p>
+            </Card>
+          )}
+
+          {/* Visual Profile Column (Stacked Colored Blocks) */}
+          {(layoutMode === "split" || layoutMode === "profile") && (
+            <div className="sticky top-6">
+              <SoilProfileVisualizer
+                layers={p.nativeLayers}
+                waterLevel={waterLevel}
+                toeLevel={toeLevel}
+                riverbedLevel={riverbed}
+                selectedId={selectedLayerId}
+                onSelectId={setSelectedLayerId}
+                hoveredId={hoveredLayerId}
+                onHoverId={setHoveredLayerId}
+                searchQuery={searchQuery}
+                selectedMaterialFilter={selectedMaterialFilter}
+                onUpdateLayer={(index, patchData) => {
+                  patch((q) => {
+                    const target = q.nativeLayers[index];
+                    if (target) {
+                      Object.assign(target, patchData);
+                    }
+                  });
+                }}
+                onAddLayer={handleAddLayer}
+                onRemoveLayer={handleRemoveLayer}
+                onReorderLayer={handleReorderLayer}
+                onAutoAlign={handleAutoAlign}
+                onApplyPreset={handleApplyPreset}
+                compact={isCompact}
+                onToggleCompact={setIsCompact}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

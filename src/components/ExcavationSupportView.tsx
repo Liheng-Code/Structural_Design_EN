@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, AlertTriangle, ChevronRight, Layers3, ShieldCheck, Waves } from "lucide-react";
+import { ArrowLeft, AlertTriangle, ChevronRight, Layers3, ShieldCheck, Waves, Columns3, Sparkles, GripVertical } from "lucide-react";
 import { Button, Card, Field, NumInput, Select, StatusPill, TextInput } from "@/components/ui";
 import { useProject } from "@/lib/store";
 import { screenPhases } from "@/lib/excavation/staged-analysis";
 import { uid } from "@/lib/utils";
+import { SoilProfileVisualizer, SOIL_ARCHETYPES } from "@/components/SoilProfileVisualizer";
+import { SoilTextureIcon } from "@/components/SoilTextureIcon";
 
 type Method = "bottom-up" | "top-down" | "semi-top-down";
 
@@ -136,12 +138,350 @@ export function ExcavationSupportView() {
 function SoilStrataBuilder() {
   const layers = useProject((s) => s.project.nativeLayers);
   const patch = useProject((s) => s.patch);
+  const p = useProject((s) => s.project);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(true);
+
+  const waterLevel = p.water?.gwlNative ?? p.water?.dryDown ?? 0;
+  const embedment = p.geometry?.embedment ?? 6;
+  const riverbed = p.geometry?.riverbed ?? 0;
+  const toeLevel = riverbed - embedment;
+
   const gaps = layers.slice(0, -1).filter((layer, index) => Math.abs(layer.zBot - layers[index + 1]!.zTop) > 0.01);
-  return <Card title="Step 1 · Soil strata / ground-model builder" action={<Button variant="outline" onClick={() => patch((p) => { const last = p.nativeLayers.at(-1); const top = last?.zBot ?? 0; p.nativeLayers.push({ id: uid("stratum"), name: `Layer ${p.nativeLayers.length + 1}`, description: "User-defined stratum", zTop: top, zBot: top - 3, gamma: 18, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 20000, nu: 0.3, kPerm: 1e-5, OCR: 1, sptN: 10, drainage: "drained", soilType: "soil" }); })}>Add stratum</Button>}>
-    <p className="mb-3 text-sm text-muted">Define strata from ground level downward. The coloured section above is generated directly from these elevations. Elevations are in metres relative to the project datum; the top elevation must be greater than the bottom elevation.</p>
-    <div className="overflow-x-auto"><table className="eng-table min-w-[1120px]"><thead><tr><th>Stratum</th><th>Material / description</th><th className="num">Top z</th><th className="num">Bottom z</th><th className="num">γ</th><th className="num">γsat</th><th className="num">φ′</th><th className="num">c′</th><th className="num">cu</th><th className="num">E</th><th className="num">SPT N</th><th>Drainage</th><th /></tr></thead><tbody>{layers.map((layer, index) => <tr key={layer.id}><td><span className="mr-1.5 inline-block size-3 rounded-sm align-middle" style={{ background: STRATA[index % STRATA.length] }} /><TextInput className="inline-flex w-32" value={layer.name} onChange={(e) => patch((p) => (p.nativeLayers[index]!.name = e.target.value))} /></td><td><TextInput className="w-32" value={layer.soilType} onChange={(e) => patch((p) => (p.nativeLayers[index]!.soilType = e.target.value))} /></td>{(["zTop", "zBot", "gamma", "gammaSat", "phi", "c", "cu", "E", "sptN"] as const).map((field) => <td key={field}><NumInput value={layer[field]} step={field === "E" ? 1000 : 0.1} onChange={(n) => patch((p) => (p.nativeLayers[index]![field] = n))} /></td>)}<td><Select value={layer.drainage} onChange={(e) => patch((p) => (p.nativeLayers[index]!.drainage = e.target.value as "drained" | "undrained"))}><option value="drained">Drained</option><option value="undrained">Undrained</option></Select></td><td><Button variant="ghost" className="text-fail" onClick={() => patch((p) => p.nativeLayers.splice(index, 1))} disabled={layers.length === 1}>Remove</Button></td></tr>)}</tbody></table></div>
-    <div className="mt-3 grid gap-2 sm:grid-cols-2"><p className={`rounded p-2 text-xs ${gaps.length ? "bg-warn-bg text-warn" : "bg-pass-bg text-pass"}`}>{gaps.length ? `${gaps.length} layer boundary gap or overlap detected. Align each layer bottom with the next layer top.` : "Layer boundaries are continuous."}</p><p className="rounded bg-info-bg p-2 text-xs text-info">Enter only approved characteristic/design soil parameters. Raw SPT/CPT values need interpretation before being used as design values.</p></div>
-  </Card>;
+
+  // Drag and drop reordering handler
+  const handleReorderStratum = (from: number, to: number, autoRestack: boolean = true) => {
+    if (to < 0 || to >= layers.length || from === to) return;
+    patch((proj) => {
+      const list = [...proj.nativeLayers];
+      const [item] = list.splice(from, 1);
+      if (!item) return;
+      list.splice(to, 0, item);
+      if (autoRestack) {
+        const topElevation = proj.nativeLayers[0]?.zTop ?? 0;
+        let currentZ = topElevation;
+        for (const layer of list) {
+          const thickness = Math.max(0.1, layer.zTop - layer.zBot);
+          layer.zTop = Number(currentZ.toFixed(2));
+          currentZ -= thickness;
+          layer.zBot = Number(currentZ.toFixed(2));
+        }
+      }
+      proj.nativeLayers = list;
+    });
+  };
+
+  const [tableDragIdx, setTableDragIdx] = useState<number | null>(null);
+  const [tableDragOverIdx, setTableDragOverIdx] = useState<number | null>(null);
+  const [tableDropPos, setTableDropPos] = useState<"before" | "after" | null>(null);
+
+  const handleTableDrop = (targetIdx: number) => {
+    if (tableDragIdx === null || tableDragIdx === targetIdx) return;
+    let finalTarget = tableDropPos === "before" ? targetIdx : targetIdx + 1;
+    if (tableDragIdx < finalTarget) {
+      finalTarget -= 1;
+    }
+    if (finalTarget >= 0 && finalTarget < layers.length && finalTarget !== tableDragIdx) {
+      handleReorderStratum(tableDragIdx, finalTarget, true);
+    }
+    setTableDragIdx(null);
+    setTableDragOverIdx(null);
+    setTableDropPos(null);
+  };
+
+  const handleAutoAlign = () => {
+    patch((proj) => {
+      for (let i = 0; i < proj.nativeLayers.length - 1; i++) {
+        proj.nativeLayers[i + 1]!.zTop = proj.nativeLayers[i]!.zBot;
+      }
+    });
+  };
+
+  const handleAddStratum = () => {
+    patch((proj) => {
+      const last = proj.nativeLayers.at(-1);
+      const top = last?.zBot ?? 0;
+      proj.nativeLayers.push({
+        id: uid("stratum"),
+        name: `Layer ${proj.nativeLayers.length + 1}`,
+        description: "User-defined stratum",
+        zTop: top,
+        zBot: top - 3,
+        gamma: 18,
+        gammaSat: 20,
+        phi: 30,
+        c: 0,
+        cu: 0,
+        E: 20000,
+        nu: 0.3,
+        kPerm: 1e-5,
+        OCR: 1,
+        sptN: 10,
+        drainage: "drained",
+        soilType: "soil",
+      });
+    });
+  };
+
+  const handleApplyPreset = (presetKey: string) => {
+    const arch = SOIL_ARCHETYPES.find((a) => a.key === presetKey);
+    if (!arch) return;
+    patch((proj) => {
+      const last = proj.nativeLayers.at(-1);
+      const top = last?.zBot ?? 0;
+      proj.nativeLayers.push({
+        id: uid("stratum"),
+        name: arch.soilType,
+        description: arch.description,
+        zTop: top,
+        zBot: top - 3,
+        gamma: arch.gamma,
+        gammaSat: arch.gammaSat,
+        phi: arch.phi,
+        c: arch.c,
+        cu: arch.cu,
+        E: arch.E,
+        nu: 0.3,
+        kPerm: 1e-5,
+        OCR: 1,
+        sptN: arch.sptN,
+        drainage: arch.drainage,
+        soilType: arch.type,
+      });
+    });
+  };
+
+  return (
+    <Card
+      title="Step 1 · Soil strata / ground-model builder"
+      action={
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowProfile(!showProfile)}
+            className="text-xs"
+          >
+            <Columns3 className="size-3.5 mr-1" />
+            <span>{showProfile ? "Hide Profile Column" : "Show Visual Profile"}</span>
+          </Button>
+          {gaps.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleAutoAlign}
+              className="text-xs bg-warn-bg text-warn border-warn/40 hover:bg-warn-bg/80"
+            >
+              <Sparkles className="size-3.5 mr-1" />
+              <span>Auto-Align ({gaps.length})</span>
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleAddStratum} className="text-xs">
+            Add stratum
+          </Button>
+        </div>
+      }
+    >
+      <p className="mb-3 text-sm text-muted">
+        Define strata from ground level downward. The interactive visual column and section above are generated directly from these elevations and properties.
+      </p>
+
+      <div className={`grid gap-6 items-start ${showProfile ? "grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.9fr)]" : "grid-cols-1"}`}>
+        <div className="space-y-3">
+          <div className="overflow-x-auto">
+            <table className="eng-table min-w-[900px] w-full">
+              <thead>
+                <tr>
+                  <th className="w-8 text-center" title="Drag & drop to reorder stratigraphy sequence">
+                    <GripVertical className="size-3.5 mx-auto text-muted" />
+                  </th>
+                  <th>Stratum</th>
+                  <th>Material / description</th>
+                  <th className="num">Top z</th>
+                  <th className="num">Bottom z</th>
+                  <th className="num">Δz</th>
+                  <th className="num">γ</th>
+                  <th className="num">γsat</th>
+                  <th className="num">φ′</th>
+                  <th className="num">c′</th>
+                  <th className="num">cu</th>
+                  <th className="num">E</th>
+                  <th className="num">SPT N</th>
+                  <th>Drainage</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {layers.map((layer, index) => {
+                  const isSelected = selectedId === layer.id;
+                  const isHovered = hoveredId === layer.id;
+                  const thickness = layer.zTop - layer.zBot;
+                  return (
+                    <tr
+                      key={layer.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", index.toString());
+                        e.dataTransfer.effectAllowed = "move";
+                        setTableDragIdx(index);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (tableDragIdx === null || tableDragIdx === index) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const pos = (e.clientY - rect.top) < rect.height / 2 ? "before" : "after";
+                        if (tableDragOverIdx !== index || tableDropPos !== pos) {
+                          setTableDragOverIdx(index);
+                          setTableDropPos(pos);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleTableDrop(index);
+                      }}
+                      onDragEnd={() => {
+                        setTableDragIdx(null);
+                        setTableDragOverIdx(null);
+                        setTableDropPos(null);
+                      }}
+                      onClick={() => setSelectedId(layer.id)}
+                      onMouseEnter={() => setHoveredId(layer.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      className={`cursor-pointer transition-colors relative ${
+                        tableDragIdx === index
+                          ? "opacity-35 bg-paper-2"
+                          : isSelected
+                            ? "bg-paper-2 font-medium"
+                            : isHovered
+                              ? "bg-panel"
+                              : ""
+                      }`}
+                    >
+                      <td className="text-center cursor-grab active:cursor-grabbing text-muted hover:text-navy" title="Click and drag to change stratigraphy order">
+                        <GripVertical className="size-3.5 mx-auto" />
+                      </td>
+                      <td>
+                        <SoilTextureIcon layerOrType={layer} size="xs" className="mr-1.5 align-middle inline-flex" />
+                        <TextInput
+                          className="inline-flex w-28 text-xs font-semibold"
+                          value={layer.name}
+                          onChange={(e) =>
+                            patch((p2) => (p2.nativeLayers[index]!.name = e.target.value))
+                          }
+                        />
+                      </td>
+                      <td>
+                        <TextInput
+                          className="w-28 text-xs"
+                          value={layer.soilType}
+                          onChange={(e) =>
+                            patch((p2) => (p2.nativeLayers[index]!.soilType = e.target.value))
+                          }
+                        />
+                      </td>
+                      {(["zTop", "zBot"] as const).map((field) => (
+                        <td key={field} className="num">
+                          <NumInput
+                            value={layer[field]}
+                            step={0.1}
+                            onChange={(n) =>
+                              patch((p2) => (p2.nativeLayers[index]![field] = n))
+                            }
+                            className="text-xs"
+                          />
+                        </td>
+                      ))}
+                      <td className="num font-mono text-xs font-semibold text-navy">
+                        {thickness.toFixed(2)}
+                      </td>
+                      {(["gamma", "gammaSat", "phi", "c", "cu", "E", "sptN"] as const).map((field) => (
+                        <td key={field} className="num">
+                          <NumInput
+                            value={layer[field]}
+                            step={field === "E" ? 1000 : 0.1}
+                            onChange={(n) =>
+                              patch((p2) => (p2.nativeLayers[index]![field] = n))
+                            }
+                            className="text-xs"
+                          />
+                        </td>
+                      ))}
+                      <td>
+                        <Select
+                          value={layer.drainage}
+                          onChange={(e) =>
+                            patch((p2) => (p2.nativeLayers[index]!.drainage = e.target.value as "drained" | "undrained"))
+                          }
+                          className="text-xs"
+                        >
+                          <option value="drained">Drained</option>
+                          <option value="undrained">Undrained</option>
+                        </Select>
+                      </td>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          className="text-fail text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            patch((p2) => p2.nativeLayers.splice(index, 1));
+                          }}
+                          disabled={layers.length === 1}
+                        >
+                          Remove
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <p className={`rounded p-2 text-xs ${gaps.length ? "bg-warn-bg text-warn" : "bg-pass-bg text-pass"}`}>
+              {gaps.length
+                ? `${gaps.length} layer boundary gap or overlap detected. Align each layer bottom with the next layer top.`
+                : "Layer boundaries are continuous without gaps."}
+            </p>
+            <p className="rounded bg-info-bg p-2 text-xs text-info">
+              Enter approved design parameters. The stacked visual profile reflects edits instantaneously.
+            </p>
+          </div>
+        </div>
+
+        {/* Visual Soil Profile Column */}
+        {showProfile && (
+          <div className="sticky top-4">
+            <SoilProfileVisualizer
+              layers={layers}
+              waterLevel={waterLevel}
+              toeLevel={toeLevel}
+              riverbedLevel={riverbed}
+              selectedId={selectedId}
+              onSelectId={setSelectedId}
+              hoveredId={hoveredId}
+              onHoverId={setHoveredId}
+              onUpdateLayer={(idx, patchData) => {
+                patch((proj) => {
+                  const target = proj.nativeLayers[idx];
+                  if (target) Object.assign(target, patchData);
+                });
+              }}
+              onAddLayer={handleAddStratum}
+              onRemoveLayer={(idx) => {
+                if (layers.length <= 1) return;
+                patch((proj) => proj.nativeLayers.splice(idx, 1));
+              }}
+              onReorderLayer={handleReorderStratum}
+              onAutoAlign={handleAutoAlign}
+              onApplyPreset={handleApplyPreset}
+            />
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 function BasementSection({ layers, excavationDepth, wallToe, waterLevel, levelDepths, wallType, method, activeStage }: { layers: { id: string; name: string; zTop: number; zBot: number }[]; excavationDepth: number; wallToe: number; waterLevel: number; levelDepths: number[]; wallType: "sheet" | "cbp"; method: Method; activeStage: number }) {

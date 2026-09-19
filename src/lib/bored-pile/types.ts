@@ -29,6 +29,14 @@ export interface SoilLayerInput {
   characteristicBaseResistance?: number; // kPa
   drainage: "drained" | "undrained";
   method: "alpha" | "beta" | "empirical";
+  waterTable?: number; // Optional stratum-specific groundwater table (m bgl or elevation)
+  hasWaterTable?: boolean;
+  porePressureMode?: "hydrostatic" | "piezometric" | "user-defined" | "ru" | "zero";
+  porePressure?: number; // kPa
+  porePressureTop?: number;
+  porePressureBot?: number;
+  ru?: number;
+  piezometricHead?: number;
 }
 
 export interface BoredPileProject {
@@ -36,6 +44,8 @@ export interface BoredPileProject {
   projectNumber: string;
   client: string;
   designer: string;
+  revision?: string;
+  calculationDate?: string;
   groundLevel: number; // m
   waterLevel: number; // m below GL
   diameter: number; // mm
@@ -56,6 +66,7 @@ export interface BoredPileProject {
   spiralSpacing: number; // mm
   stiffenerBarDiameter: number; // mm
   stiffenerSpacing: number; // mm
+  exposureClass: string; // e.g. XC2, XC3, XD1, XA2
 }
 
 export interface LayerResistanceResult {
@@ -68,10 +79,25 @@ export interface LayerResistanceResult {
   methodUsed: string;
 }
 
+export interface LayerSettlementResult {
+  layerId: string;
+  name: string;
+  soilType: string;
+  thickness: number;
+  depthTop: number;
+  depthBottom: number;
+  modulus: number; // kPa (E50 or Eoed)
+  immediateSettlement: number; // mm
+  consolidationSettlement: number; // mm
+  totalLayerSettlement: number; // mm
+}
+
 export interface BoredPileAnalysisResult {
   pileArea: number; // m2
   pilePerimeter: number; // m
   layers: LayerResistanceResult[];
+  layerSettlements: LayerSettlementResult[];
+  serviceLoad: number; // kN
   totalShaftResistance: number; // kN (R_sk)
   baseUnitResistance: number; // kPa (q_b)
   baseResistance: number; // kN (R_bk)
@@ -91,5 +117,18 @@ export interface BoredPileAnalysisResult {
   spiralWeight: number; // kg
   stiffenerWeight: number; // kg
   totalRebarWeight: number; // kg
+  steelRatioKgPerM3: number; // kg/m3
+  minReinforcementRatioPass: boolean;
+  maxReinforcementRatioPass: boolean;
+  minBarSizePass: boolean;
+  spiralSpacingPass: boolean;
+  bendingInteractionRatio: number;
+  designAxialLoad: number;
+  utilization: number;
+  structuralInteraction: number;
+  totalBaseResistance: number;
+  characteristicResistance: number;
+  maxLateralDeflection: number;
+  reinforcementArea: number;
   overallStatus: "PASS" | "FAIL" | "WARNING";
 }

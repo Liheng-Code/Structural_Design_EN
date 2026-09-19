@@ -9,12 +9,16 @@ import {
   RotateCcw,
   Save,
   X,
+  Maximize2,
+  Minimize2,
+  GitCompare,
 } from "lucide-react";
 import { CrossSection } from "@/components/diagrams/CrossSection";
 import { FreeBody } from "@/components/diagrams/FreeBody";
 import { MVDiagram } from "@/components/diagrams/MVDiagram";
 import { NMInteractionDiagram } from "@/components/diagrams/NMInteractionDiagram";
 import { PressureDiagram } from "@/components/diagrams/PressureDiagram";
+import { CompareResultsView } from "@/components/CompareResultsView";
 import {
   ApproachPanel,
   CappingPanel,
@@ -53,6 +57,8 @@ export function CalculatorApp() {
   const logout = useProject((s) => s.logout);
   const setActiveModule = useProject((s) => s.setActiveModule);
   const [menu, setMenu] = useState(false);
+  const [dashboardViewMode, setDashboardViewMode] = useState<"standard" | "focus">("standard");
+  const [resultsSubView, setResultsSubView] = useState<"standard" | "compare">("standard");
 
   useEffect(() => {
     void useProject.persist.rehydrate();
@@ -67,131 +73,203 @@ export function CalculatorApp() {
 
   return (
     <div className="min-h-dvh bg-paper text-ink">
-      <header className="title-block no-print sticky top-0 z-30">
-        <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+      {dashboardViewMode === "focus" && (
+        <div className="bg-[#0b192c] border-b border-cyan-500/40 px-4 py-2.5 flex items-center justify-between text-xs font-mono text-cyan-300 sticky top-0 z-50 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="font-bold uppercase tracking-wider text-white">Focus Review Mode Active</span>
+            <span className="text-slate-400 hidden sm:inline">· Sidebars & header hidden for maximum Interactive Cross-Section space</span>
+          </div>
           <button
             type="button"
-            onClick={() => setActiveModule("modules")}
-            className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono bg-navy-mid/80 hover:bg-navy-mid border border-cyan-500/40 text-paper transition"
-            title="Return to Modules Dashboard"
+            onClick={() => setDashboardViewMode("standard")}
+            className="flex items-center gap-1.5 px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-md font-bold shadow transition cursor-pointer"
           >
-            <ArrowLeft className="size-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Modules</span>
+            <Minimize2 className="size-3.5" />
+            <span>Exit Focus Mode</span>
           </button>
-          {project.wallSystem === "cbp" ? (
+        </div>
+      )}
+
+      {dashboardViewMode === "standard" && (
+        <header className="title-block no-print sticky top-0 z-30">
+          <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
             <button
               type="button"
-              onClick={() => setActiveModule("cbp")}
+              onClick={() => setActiveModule("modules")}
               className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono bg-navy-mid/80 hover:bg-navy-mid border border-cyan-500/40 text-paper transition"
-              title="Return to excavation concept workspace"
+              title="Return to Modules Dashboard"
             >
               <ArrowLeft className="size-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Excavation concept</span>
+              <span className="hidden sm:inline">Modules</span>
             </button>
-          ) : null}
-          <button className="lg:hidden min-h-10 min-w-10" onClick={() => setMenu(true)} aria-label="Open navigation">
-            <Menu className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-[10px] uppercase tracking-[0.22em] text-paper/70">Eurocode · EN 1990 / 1991 / 1992 / 1997</p>
-            <h1 className="truncate font-display text-base font-semibold leading-tight sm:text-lg">
-              {project.wallSystem === "cbp" ? "CBP Excavation Support" : "Sheet Pile Excavation Support"} · Design Suite
-            </h1>
-          </div>
-          <StatusPill status={bundle.overall} />
-          <div className="hidden items-center gap-1 sm:flex">
-            <Button variant="ghost" className="text-paper hover:bg-navy-mid" onClick={() => window.print()}>
-              <Printer className="size-4" /> Print
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-paper hover:bg-navy-mid"
-              onClick={() => downloadText(`u-sheet-${project.meta.revision}.json`, JSON.stringify(project, null, 2))}
-            >
-              <Download className="size-4" /> JSON
-            </Button>
-            <label className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-sm px-3 text-sm text-paper hover:bg-navy-mid">
-              <FolderOpen className="size-4" />
-              Load
-              <input
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  const txt = await f.text();
-                  setProject({ ...defaultProject(), ...JSON.parse(txt) });
-                }}
-              />
-            </label>
-            <Button variant="ghost" className="text-paper hover:bg-navy-mid" onClick={() => reset()}>
-              <RotateCcw className="size-4" /> Reset
-            </Button>
-            <Button variant="ghost" className="text-rose-300 hover:bg-rose-950/50 hover:text-rose-200" onClick={() => logout()}>
-              <LogOut className="size-4" /> Logout
-            </Button>
-          </div>
-        </div>
-        <div className="flex items-center justify-between border-t border-white/10 px-3 py-1.5 text-[11px] text-paper/80 sm:px-4">
-          <span className="truncate">{project.meta.option}</span>
-          <span className="font-mono tabular-nums">
-            H={fmt(project.geometry.retainedHeight, 2)} m · D={fmt(project.geometry.embedment, 2)} m · t=
-            {(project.geometry.wallThickness * 1000).toFixed(0)} mm
-          </span>
-        </div>
-      </header>
-
-      <div className="mx-auto flex max-w-[1600px] flex-col lg:flex-row">
-        <aside
-          className={`no-print z-40 w-64 shrink-0 overflow-y-auto bg-navy-deep lg:sticky lg:top-0 lg:max-h-dvh lg:block ${
-            menu ? "fixed inset-y-0 left-0 block pt-12" : "hidden lg:block"
-          }`}
-        >
-          <button className="absolute right-2 top-2 text-paper lg:hidden" onClick={() => setMenu(false)} aria-label="Close">
-            <X className="size-5" />
-          </button>
-          <nav className="flex flex-col py-2">
-            {NAV_ITEMS.map((it) => (
+            {project.wallSystem === "cbp" ? (
               <button
-                key={it.id}
-                onClick={() => {
-                  setNav(it.id);
-                  setMenu(false);
-                }}
-                className={`flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-11 ${
-                  nav === it.id ? "bg-navy-mid text-paper" : "text-paper/80 hover:bg-navy hover:text-paper"
-                }`}
+                type="button"
+                onClick={() => setActiveModule("cbp")}
+                className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono bg-navy-mid/80 hover:bg-navy-mid border border-cyan-500/40 text-paper transition"
+                title="Return to excavation concept workspace"
               >
-                <span className="w-6 font-mono text-[11px] text-paper/50">{it.n}</span>
-                {it.label}
+                <ArrowLeft className="size-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Excavation concept</span>
               </button>
-            ))}
-          </nav>
-        </aside>
+            ) : null}
+            <button className="lg:hidden min-h-10 min-w-10" onClick={() => setMenu(true)} aria-label="Open navigation">
+              <Menu className="size-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-[10px] uppercase tracking-[0.22em] text-paper/70">Eurocode · EN 1990 / 1991 / 1992 / 1997</p>
+              <h1 className="truncate font-display text-base font-semibold leading-tight sm:text-lg">
+                {project.wallSystem === "cbp" ? "CBP Excavation Support" : "Sheet Pile Excavation Support"} · Design Suite
+              </h1>
+            </div>
+            <StatusPill status={bundle.overall} />
+            <div className="hidden items-center gap-1 sm:flex">
+              <Button
+                variant="ghost"
+                className="text-cyan-300 hover:bg-navy-mid border border-cyan-500/40 font-mono text-xs"
+                onClick={() => setDashboardViewMode("focus")}
+                title="Switch to Focus View (maximize diagram space)"
+              >
+                <Maximize2 className="size-4 text-cyan-400" />
+                <span>Focus View</span>
+              </Button>
+              <Button variant="ghost" className="text-paper hover:bg-navy-mid" onClick={() => window.print()}>
+                <Printer className="size-4" /> Print
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-paper hover:bg-navy-mid"
+                onClick={() => downloadText(`u-sheet-${project.meta.revision}.json`, JSON.stringify(project, null, 2))}
+              >
+                <Download className="size-4" /> JSON
+              </Button>
+              <label className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-sm px-3 text-sm text-paper hover:bg-navy-mid">
+                <FolderOpen className="size-4" />
+                Load
+                <input
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const txt = await f.text();
+                    setProject({ ...defaultProject(), ...JSON.parse(txt) });
+                  }}
+                />
+              </label>
+              <Button variant="ghost" className="text-paper hover:bg-navy-mid" onClick={() => reset()}>
+                <RotateCcw className="size-4" /> Reset
+              </Button>
+              <Button variant="ghost" className="text-rose-300 hover:bg-rose-950/50 hover:text-rose-200" onClick={() => logout()}>
+                <LogOut className="size-4" /> Logout
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-white/10 px-3 py-1.5 text-[11px] text-paper/80 sm:px-4">
+            <span className="truncate">{project.meta.option}</span>
+            <span className="font-mono tabular-nums">
+              H={fmt(project.geometry.retainedHeight, 2)} m · D={fmt(project.geometry.embedment, 2)} m · t=
+              {(project.geometry.wallThickness * 1000).toFixed(0)} mm
+            </span>
+          </div>
+        </header>
+      )}
+
+      <div className={`mx-auto flex ${dashboardViewMode === "focus" ? "max-w-full px-2 py-4" : "max-w-[1600px]"} flex-col lg:flex-row`}>
+        {dashboardViewMode === "standard" && (
+          <aside
+            className={`no-print z-40 w-64 shrink-0 overflow-y-auto bg-navy-deep lg:sticky lg:top-0 lg:max-h-dvh lg:block ${
+              menu ? "fixed inset-y-0 left-0 block pt-12" : "hidden lg:block"
+            }`}
+          >
+            <button className="absolute right-2 top-2 text-paper lg:hidden" onClick={() => setMenu(false)} aria-label="Close">
+              <X className="size-5" />
+            </button>
+            <nav className="flex flex-col py-2">
+              {NAV_ITEMS.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => {
+                    setNav(it.id);
+                    setMenu(false);
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-11 ${
+                    nav === it.id ? "bg-navy-mid text-paper" : "text-paper/80 hover:bg-navy hover:text-paper"
+                  }`}
+                >
+                  <span className="w-6 font-mono text-[11px] text-paper/50">{it.n}</span>
+                  {it.label}
+                </button>
+              ))}
+            </nav>
+          </aside>
+        )}
 
         <main className="min-w-0 flex-1 space-y-4 p-3 sm:p-4 order-1 lg:order-2">
-          <p className="no-print text-xs text-muted">
-            Preliminary design tool — not a substitute for site investigation or statutory approval. Change any input and all
-            diagrams, forces, utilizations and the report update immediately.
-          </p>
+          {dashboardViewMode === "standard" && (
+            <p className="no-print text-xs text-muted">
+              Preliminary design tool — not a substitute for site investigation or statutory approval. Change any input and all
+              diagrams, forces, utilizations and the report update immediately.
+            </p>
+          )}
 
-          <Card title="Interactive cross-section">
+          <Card
+            title="Interactive cross-section"
+            action={
+              <button
+                type="button"
+                onClick={() => setDashboardViewMode((prev) => (prev === "standard" ? "focus" : "standard"))}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-navy-mid hover:bg-navy border border-cyan-500/40 text-xs font-mono text-cyan-300 transition cursor-pointer"
+                title="Toggle focus view for review sessions"
+              >
+                {dashboardViewMode === "focus" ? <Minimize2 className="size-3.5 text-cyan-400" /> : <Maximize2 className="size-3.5 text-cyan-400" />}
+                <span>{dashboardViewMode === "focus" ? "Standard View" : "Focus View"}</span>
+              </button>
+            }
+          >
             <div className="overflow-x-auto">
               <CrossSection project={project} water={water} traffic={!!lc?.checks && (project.loadCases.find((c) => c.id === lc.id)?.trafficOn ?? false)} />
             </div>
           </Card>
 
-          <div className="flex flex-wrap items-center gap-2 no-print">
-            <span className="text-xs font-display uppercase tracking-wider text-muted">Load case</span>
-            <Select value={lc?.id ?? loadCaseId} onChange={(e) => setLoadCase(e.target.value)} className="max-w-md">
-              {bundle.loadCases.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id} · {c.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          {nav === "results" && (
+            <div className="flex items-center gap-2 border-b border-rule pb-2 no-print">
+              <button
+                type="button"
+                onClick={() => setResultsSubView("standard")}
+                className={`px-3 py-1.5 text-xs font-display font-semibold rounded transition cursor-pointer ${
+                  resultsSubView === "standard" ? "bg-navy text-paper shadow-sm" : "bg-panel-muted text-muted hover:text-ink"
+                }`}
+              >
+                Standard Results & Diagrams
+              </button>
+              <button
+                type="button"
+                onClick={() => setResultsSubView("compare")}
+                className={`px-3 py-1.5 text-xs font-display font-semibold rounded transition flex items-center gap-1.5 cursor-pointer ${
+                  resultsSubView === "compare" ? "bg-navy text-paper shadow-sm" : "bg-panel-muted text-muted hover:text-ink"
+                }`}
+              >
+                <GitCompare className="size-3.5" />
+                Compare Load Cases
+              </button>
+            </div>
+          )}
+
+          {nav !== "results" || resultsSubView === "standard" ? (
+            <div className="flex flex-wrap items-center gap-2 no-print">
+              <span className="text-xs font-display uppercase tracking-wider text-muted">Load case</span>
+              <Select value={lc?.id ?? loadCaseId} onChange={(e) => setLoadCase(e.target.value)} className="max-w-md">
+                {bundle.loadCases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} · {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
 
           {nav === "project" && <ProjectPanel />}
           {nav === "design" && <DesignPanel />}
@@ -210,33 +288,39 @@ export function CalculatorApp() {
           {nav === "stages" && <StagesPanel />}
           {(nav === "results" || nav === "report" || nav === "parametric" || nav === "sensitivity") && null}
 
-          {nav === "results" && lc ? <ResultsBody bundleLc={lc} /> : null}
-          {nav === "parametric" ? <ParametricBody /> : null}
-          {nav === "sensitivity" ? <SensitivityBody /> : null}
-          {nav === "report" ? <Report project={project} bundle={bundle} lc={lc} /> : null}
+          {nav === "results" && resultsSubView === "compare" ? (
+            <CompareResultsView bundle={bundle} currentLcId={lc?.id ?? loadCaseId} />
+          ) : (
+            <>
+              {nav === "results" && lc ? <ResultsBody bundleLc={lc} /> : null}
+              {nav === "parametric" ? <ParametricBody /> : null}
+              {nav === "sensitivity" ? <SensitivityBody /> : null}
+              {nav === "report" ? <Report project={project} bundle={bundle} lc={lc} /> : null}
 
-          {nav !== "report" && lc ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              <Card title={`Pressure · ${lc.name}`}>
-                <PressureDiagram stations={lc.stations} side="L" />
-              </Card>
-              <Card title="Free body · upstream wall">
-                <FreeBody project={project} lc={lc} />
-              </Card>
-            </div>
-          ) : null}
+              {nav !== "report" && lc ? (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <Card title={`Pressure · ${lc.name}`}>
+                    <PressureDiagram stations={lc.stations} side="L" />
+                  </Card>
+                  <Card title="Free body · upstream wall">
+                    <FreeBody project={project} lc={lc} />
+                  </Card>
+                </div>
+              ) : null}
 
-          {lc && nav === "results" ? (
-            <div className="space-y-3">
-              <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-navy">Traceable checks</h3>
-              {lc.checks
-                .filter((c) => c.applicable)
-                .slice(0, 12)
-                .map((c) => (
-                  <CheckDetail key={c.id} c={c} />
-                ))}
-            </div>
-          ) : null}
+              {lc && nav === "results" ? (
+                <div className="space-y-3">
+                  <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-navy">Traceable checks</h3>
+                  {lc.checks
+                    .filter((c) => c.applicable)
+                    .slice(0, 12)
+                    .map((c) => (
+                      <CheckDetail key={c.id} c={c} />
+                    ))}
+                </div>
+              ) : null}
+            </>
+          )}
         </main>
 
         <aside className="no-print order-2 w-full shrink-0 space-y-3 border-t border-rule p-3 lg:order-3 lg:w-72 lg:border-l lg:border-t-0 lg:p-4">

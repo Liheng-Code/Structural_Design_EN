@@ -44,6 +44,8 @@ export type Drainage = "drained" | "undrained";
 
 export type RetainingWallSystem = "sheet-pile" | "cbp";
 
+export type PorePressureMode = "hydrostatic" | "piezometric" | "user-defined" | "ru" | "zero";
+
 export interface SoilLayer {
   id: string;
   name: string;
@@ -62,6 +64,16 @@ export interface SoilLayer {
   sptN: number;
   drainage: Drainage;
   soilType: string;
+
+  // Optional layer-specific Groundwater Table and Pore Pressure parameters
+  waterTable?: number; // Optional stratum-specific phreatic elevation / GWL in m (e.g. -1.5m)
+  hasWaterTable?: boolean; // Whether this layer defines a distinct phreatic / perched water level
+  porePressureMode?: PorePressureMode; // Mode of pore water pressure: hydrostatic, piezometric, user-defined, ru, or zero
+  porePressure?: number; // Reference pore water pressure u in kPa
+  porePressureTop?: number; // Pore pressure at top of stratum (kPa)
+  porePressureBot?: number; // Pore pressure at bottom of stratum (kPa)
+  ru?: number; // Pore pressure ratio ru = u / sigma_v (dimensionless, 0.0 - 0.6)
+  piezometricHead?: number; // Piezometric head elevation in m (for confined/artesian conditions)
 }
 
 export interface TieRod {
@@ -70,6 +82,8 @@ export interface TieRod {
   elevation: number;
   diameter: number;
   spacing: number;
+  capacity_kN?: number;
+  fyk?: number;
   fy: number;
   fu: number;
   corrosion: number;
@@ -108,6 +122,7 @@ export interface ConstructionStage {
 }
 
 export interface Project {
+  waterLevel?: number;
   meta: {
     projectName: string;
     structure: string;

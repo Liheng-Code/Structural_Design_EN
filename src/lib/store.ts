@@ -48,7 +48,7 @@ interface Store {
 export const NAV_ITEMS: { id: NavId; n: string; label: string }[] = [
   { id: "project", n: "1", label: "Project" },
   { id: "design", n: "2", label: "Design type" },
-  { id: "geometry", n: "3", label: "Geometry" },
+  { id: "geometry", n: "3", label: "Geometry & Load" },
   { id: "soil", n: "4", label: "Soil" },
   { id: "water", n: "5", label: "Groundwater" },
   { id: "flood", n: "6", label: "Flood" },
