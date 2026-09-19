@@ -1,12 +1,13 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
-import { A as ChevronRight, C as Download, D as CircleDot, E as Compass, M as Calculator, N as ArrowRight, O as CircleCheck, P as ArrowLeft, S as EyeOff, T as Cpu, _ as Layers, a as TrendingUp, b as FileText, c as ShieldCheck, d as Printer, f as Plus, g as Lock, h as LogOut, i as TriangleAlert, j as Check, k as CircleAlert, l as Save, m as Mail, n as Waves, o as Trash2, p as Menu, r as Upload, s as SlidersVertical, t as X, u as RotateCcw, v as HardHat, w as Database, x as Eye, y as FolderOpen } from "../_libs/lucide-react.mjs";
+import { A as CircleDot, C as FileText, D as Database, E as Download, F as Calculator, I as Building2, L as ArrowRight, M as CircleAlert, N as ChevronRight, O as Cpu, P as Check, R as ArrowLeft, S as FolderOpen, T as EyeOff, _ as Mail, a as TriangleAlert, b as Layers, c as SlidersVertical, d as RotateCcw, f as Printer, g as MapPin, h as Menu, i as Upload, j as CircleCheck, k as Compass, l as ShieldCheck, m as Mountain, n as Wind, o as TrendingUp, p as Plus, r as Waves, s as Trash2, t as X, u as Save, v as LogOut, w as Eye, x as HardHat, y as Lock, z as Activity } from "../_libs/lucide-react.mjs";
 import { t as clsx } from "../_libs/clsx.mjs";
 import { t as twMerge } from "../_libs/tailwind-merge.mjs";
 import { n as persist, r as create, t as createJSONStorage } from "../_libs/zustand.mjs";
 import { t as katex } from "../_libs/katex.mjs";
 import { n as utils, r as writeSync, t as readSync } from "../_libs/xlsx.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BY2cplmk.js
+import { a as CartesianGrid, c as Legend, i as Line, n as YAxis, o as ResponsiveContainer, r as XAxis, s as Tooltip, t as LineChart } from "../_libs/recharts+[...].mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CfjNGEPu.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function CrossSection({ project, water, traffic }) {
@@ -941,14 +942,14 @@ function PressureDiagram({ stations, side = "L" }) {
 				stroke: "#1c1917",
 				strokeWidth: "1.2"
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Legend, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Legend$1, {
 				x: 470,
 				y: 24
 			})
 		]
 	});
 }
-function Legend({ x, y }) {
+function Legend$1({ x, y }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("g", { children: [
 		{
 			c: "#8a6a3a",
@@ -999,7 +1000,7 @@ function Button({ variant = "primary", className, ...props }) {
 		...props
 	});
 }
-function Field$1({ label, unit, hint, source, children }) {
+function Field$4({ label, unit, hint, source, children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
 		className: "flex flex-col gap-1 min-w-0",
 		children: [
@@ -1688,6 +1689,33 @@ function trap(y, x) {
 	for (let i = 1; i < x.length; i++) s += .5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]);
 	return s;
 }
+function trapMoment(p, z, z0) {
+	let s = 0;
+	for (let i = 1; i < z.length; i++) {
+		const p0 = p[i - 1];
+		const p1 = p[i];
+		const zA = z[i - 1];
+		const zB = z[i];
+		const dz = zB - zA;
+		const F = .5 * (p0 + p1) * dz;
+		Math.abs(p0 + p1) < 1e-12 ? .5 * (zA + zB) : (p0 * zA + p1 * zB) / (p0 + p1) * .5 + .25 * (zA + zB);
+		const lever = ((2 * p0 + p1) * zA + (p0 + 2 * p1) * zB) / (3 * (p0 + p1) + 1e-12);
+		s += F * (lever - z0);
+	}
+	return s;
+}
+function lerp(a, b, t) {
+	return a + (b - a) * t;
+}
+function interp(xs, ys, x) {
+	if (x <= xs[0]) return ys[0];
+	if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
+	for (let i = 1; i < xs.length; i++) if (x <= xs[i]) {
+		const t = (x - xs[i - 1]) / (xs[i] - xs[i - 1] || 1);
+		return lerp(ys[i - 1], ys[i], t);
+	}
+	return ys[ys.length - 1];
+}
 function solveGauss(A, b) {
 	const n = b.length;
 	const M = new Array(n);
@@ -1816,25 +1844,29 @@ function beamFem(opts) {
 		y[i] = u[2 * i] ?? 0;
 		th[i] = u[2 * i + 1] ?? 0;
 	}
+	const springForceAt = /* @__PURE__ */ new Map();
+	for (const s of opts.springs) {
+		let nearest = 0;
+		let best = Infinity;
+		for (let i = 0; i < n; i++) {
+			const d = Math.abs(z[i] - s.z);
+			if (d < best) {
+				best = d;
+				nearest = i;
+			}
+		}
+		const F_spring = -s.k * (y[nearest] ?? 0);
+		springForceAt.set(nearest, (springForceAt.get(nearest) ?? 0) + F_spring);
+	}
+	const wNet = z.map((_, i) => (opts.p[i] ?? 0) - (opts.kSoil[i] ?? 0) * (y[i] ?? 0));
 	const M = Array(n).fill(0);
 	const V = Array(n).fill(0);
-	for (let e = 0; e < n - 1; e++) {
-		const L = Math.abs(z[e + 1] - z[e]);
-		if (L < 1e-9) continue;
-		const EI = opts.EI;
-		const y1 = y[e];
-		const t1 = th[e];
-		const y2 = y[e + 1];
-		const t2 = th[e + 1];
-		const Me1 = EI * (6 / L ** 2) * (y1 - y2) + EI * (4 / L) * t1 + EI * (2 / L) * t2;
-		const Me2 = EI * (6 / L ** 2) * (y2 - y1) + EI * (2 / L) * t1 + EI * (4 / L) * t2;
-		M[e] = e === 0 ? Me1 : .5 * (M[e] + Me1);
-		M[e + 1] = Me2;
-		const p1 = opts.p[e] ?? 0;
-		const p2 = opts.p[e + 1] ?? 0;
-		const Ve = (Me1 + Me2) / L + .5 * (p1 + p2) * L;
-		V[e] = e === 0 ? Ve : .5 * (V[e] + Ve);
-		V[e + 1] = Ve - .5 * (p1 + p2) * L;
+	V[0] = springForceAt.get(0) ?? 0;
+	for (let i = 1; i < n; i++) {
+		const dx = Math.abs(z[i] - z[i - 1]);
+		V[i] = V[i - 1] + .5 * (wNet[i - 1] + wNet[i]) * dx;
+		M[i] = M[i - 1] + .5 * (V[i - 1] + V[i]) * dx;
+		V[i] += springForceAt.get(i) ?? 0;
 	}
 	return {
 		z,
@@ -2274,7 +2306,7 @@ function ProjectPanel() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-2",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Retaining wall system",
 					hint: "CBP is a conceptual configuration until its separate EC2/EC7 checks are implemented.",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
@@ -2292,42 +2324,42 @@ function ProjectPanel() {
 						})]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Project name",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.projectName,
 						onChange: (e) => patch((q) => q.meta.projectName = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Option",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.option,
 						onChange: (e) => patch((q) => q.meta.option = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Prepared by",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.preparedBy,
 						onChange: (e) => patch((q) => q.meta.preparedBy = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Checked by",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.checkedBy,
 						onChange: (e) => patch((q) => q.meta.checkedBy = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Revision",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.revision,
 						onChange: (e) => patch((q) => q.meta.revision = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Date",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						type: "date",
@@ -2335,7 +2367,7 @@ function ProjectPanel() {
 						onChange: (e) => patch((q) => q.meta.date = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Issue status",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.meta.status,
@@ -2343,7 +2375,7 @@ function ProjectPanel() {
 					})
 				})
 			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 			label: "Notes",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
 				className: "mt-2 w-full min-h-24 rounded-sm border border-rule bg-panel px-2.5 py-2 text-sm",
@@ -2361,7 +2393,7 @@ function DesignPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-2",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "System",
 					hint: "Changing type shows/hides relevant checks. Formulas are not forced to be identical.",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Select, {
@@ -2373,7 +2405,7 @@ function DesignPanel() {
 						}, k))
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Structural model",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.structuralModel,
@@ -2402,7 +2434,7 @@ function DesignPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Earth pressure method",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.earth.method,
@@ -2427,7 +2459,7 @@ function DesignPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Restrained wall uses K0",
 					hint: "Stiff ties may prevent Ka mobilisation.",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
@@ -2455,7 +2487,7 @@ function GeometryPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Retained height H",
 					unit: "m",
 					source: "USER INPUT",
@@ -2464,7 +2496,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.retainedHeight = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Embedment D",
 					unit: "m",
 					source: "USER INPUT",
@@ -2473,7 +2505,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.embedment = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Total length L",
 					unit: "m",
 					source: "DERIVED",
@@ -2483,7 +2515,7 @@ function GeometryPanel() {
 						disabled: true
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Road width",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2491,7 +2523,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.roadWidth = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Out-to-out width",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2499,7 +2531,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.totalWidth = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Wall thickness t",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2508,7 +2540,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.wallThickness = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Riverbed elevation",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2516,7 +2548,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.riverbed = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "D min (auto)",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2524,7 +2556,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.dMin = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "D max (auto)",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2532,7 +2564,7 @@ function GeometryPanel() {
 						onChange: (n) => patch((q) => q.geometry.dMax = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "D step",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2555,14 +2587,14 @@ function SoilPanel() {
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "grid gap-3 sm:grid-cols-3",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Description",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 							value: p.coreFill.name,
 							onChange: (e) => patch((q) => q.coreFill.name = e.target.value)
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "γ bulk",
 						unit: "kN/m³",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2570,7 +2602,7 @@ function SoilPanel() {
 							onChange: (n) => patch((q) => q.coreFill.gamma = n)
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "γ sat",
 						unit: "kN/m³",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2578,7 +2610,7 @@ function SoilPanel() {
 							onChange: (n) => patch((q) => q.coreFill.gammaSat = n)
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "φ'",
 						unit: "°",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2586,7 +2618,7 @@ function SoilPanel() {
 							onChange: (n) => patch((q) => q.coreFill.phi = n)
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "c'",
 						unit: "kPa",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2594,7 +2626,7 @@ function SoilPanel() {
 							onChange: (n) => patch((q) => q.coreFill.c = n)
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Compaction",
 						unit: "% MDD",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2709,7 +2741,7 @@ function WaterPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "γw",
 					unit: "kN/m³",
 					source: "CODE",
@@ -2719,7 +2751,7 @@ function WaterPanel() {
 						onChange: (n) => patch((q) => q.water.gammaW = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Native GWL",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2727,7 +2759,7 @@ function WaterPanel() {
 						onChange: (n) => patch((q) => q.water.gwlNative = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Core water (dry)",
 					unit: "m",
 					hint: "Well-drained granular core default 0.00 — ASSUMPTION",
@@ -2736,7 +2768,7 @@ function WaterPanel() {
 						onChange: (n) => patch((q) => q.water.coreDry = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Core water (flood)",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2757,7 +2789,7 @@ function FloodPanel() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Dry upstream",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2765,7 +2797,7 @@ function FloodPanel() {
 						onChange: (n) => patch((q) => q.water.dryUp = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Dry downstream",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2773,7 +2805,7 @@ function FloodPanel() {
 						onChange: (n) => patch((q) => q.water.dryDown = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Flood upstream HWL",
 					unit: "m",
 					source: "USER INPUT",
@@ -2782,7 +2814,7 @@ function FloodPanel() {
 						onChange: (n) => patch((q) => q.water.floodUp = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Flood downstream HWL",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2790,7 +2822,7 @@ function FloodPanel() {
 						onChange: (n) => patch((q) => q.water.floodDown = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Δh flood",
 					unit: "m",
 					source: "DERIVED",
@@ -2815,7 +2847,7 @@ function TrafficPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Load model",
 					hint: "Uniform q is an ASSUMPTION unless calibrated to a vehicle model.",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
@@ -2845,7 +2877,7 @@ function TrafficPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Uniform q",
 					unit: "kPa",
 					source: "ASSUMPTION",
@@ -2854,7 +2886,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.q = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Axle load",
 					unit: "kN",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2862,7 +2894,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.axleLoad = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "No. of axles",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: 1,
@@ -2870,7 +2902,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.nAxles = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Axle spacing",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2878,7 +2910,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.axleSpacing = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "DAF",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .05,
@@ -2886,7 +2918,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.DAF = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Distribution width",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2894,7 +2926,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.distWidth = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Plant load",
 					unit: "kPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2902,7 +2934,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.traffic.plantLoad = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Asphalt thickness",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2911,7 +2943,7 @@ function TrafficPanel() {
 						onChange: (n) => patch((q) => q.pavement.asphalt = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Subbase thickness",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2932,7 +2964,7 @@ function SheetPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Section library",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Select, {
 						value: p.sheetPile.sectionName,
@@ -2946,7 +2978,7 @@ function SheetPanel() {
 						children: SECTION_LIBRARY.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { children: s.name }, s.name))
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "fcu",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2957,7 +2989,7 @@ function SheetPanel() {
 						})
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "fck",
 					unit: "MPa",
 					source: "DERIVED",
@@ -2966,7 +2998,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.fck = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "fyk",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2974,7 +3006,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.fyk = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "c_min",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2983,7 +3015,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.cover = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Δc_dev",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -2992,7 +3024,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.deltaCdev = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Bar diameter",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3001,7 +3033,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.barDia = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Bar spacing",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3014,7 +3046,7 @@ function SheetPanel() {
 						})
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "As each face",
 					unit: "mm²/m",
 					source: "DERIVED",
@@ -3024,7 +3056,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.asMainEachFace = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "I_eff / I_g",
 					source: "ASSUMPTION",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3033,7 +3065,7 @@ function SheetPanel() {
 						onChange: (n) => patch((q) => q.sheetPile.IeffFactor = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "n_h subgrade",
 					unit: "kN/m³",
 					source: "ASSUMPTION",
@@ -3060,7 +3092,7 @@ function CbpPanel() {
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Pile diameter D",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3069,7 +3101,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.diameter = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Centre spacing s",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3081,7 +3113,7 @@ function CbpPanel() {
 						})
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Pile length",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3090,7 +3122,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.pileLength = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Clear gap",
 					unit: "m",
 					source: "DERIVED",
@@ -3100,7 +3132,7 @@ function CbpPanel() {
 						disabled: true
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Projected solid ratio",
 					source: "DERIVED",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3109,7 +3141,7 @@ function CbpPanel() {
 						disabled: true
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Lateral interaction model",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: c.lateralModel,
@@ -3123,7 +3155,7 @@ function CbpPanel() {
 						})]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Concrete fck",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3131,7 +3163,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.fck = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Steel fyk",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3139,7 +3171,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.fyk = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Nominal cover",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3148,7 +3180,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.cover = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Longitudinal bars",
 					unit: "number",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3157,7 +3189,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.barCount = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Bar diameter",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3166,7 +3198,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.barDiameter = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Stirrup diameter",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3175,7 +3207,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.stirrupDiameter = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Water-control measure",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: c.waterCutoff,
@@ -3196,7 +3228,7 @@ function CbpPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "n_h subgrade",
 					unit: "kN/m³",
 					source: "ASSUMPTION",
@@ -3206,7 +3238,7 @@ function CbpPanel() {
 						onChange: (n) => patch((q) => q.cbp.nh = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "k_h override",
 					unit: "kN/m³",
 					hint: "Leave 0 to use n_h·z",
@@ -3246,14 +3278,14 @@ function TiesPanel() {
 		children: p.ties.map((tr, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mb-4 grid gap-3 border-b border-rule pb-4 sm:grid-cols-4",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Name",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: tr.name,
 						onChange: (e) => patch((q) => q.ties[i].name = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Elevation y",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3261,7 +3293,7 @@ function TiesPanel() {
 						onChange: (n) => patch((q) => q.ties[i].elevation = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Diameter",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
@@ -3276,7 +3308,7 @@ function TiesPanel() {
 						})]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Spacing s",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3284,7 +3316,7 @@ function TiesPanel() {
 						onChange: (n) => patch((q) => q.ties[i].spacing = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "fy",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3292,7 +3324,7 @@ function TiesPanel() {
 						onChange: (n) => patch((q) => q.ties[i].fy = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Corrosion",
 					unit: "mm",
 					hint: "Radial allowance",
@@ -3302,7 +3334,7 @@ function TiesPanel() {
 						onChange: (n) => patch((q) => q.ties[i].corrosion = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Thread efficiency",
 					source: "ASSUMPTION",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3345,7 +3377,7 @@ function CappingPanel() {
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Width b",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3354,7 +3386,7 @@ function CappingPanel() {
 						onChange: (n) => patch((q) => q.capping.b = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Depth h",
 					unit: "m",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3363,7 +3395,7 @@ function CappingPanel() {
 						onChange: (n) => patch((q) => q.capping.h = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Cover",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3372,7 +3404,7 @@ function CappingPanel() {
 						onChange: (n) => patch((q) => q.capping.cover = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "fck",
 					unit: "MPa",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3380,7 +3412,7 @@ function CappingPanel() {
 						onChange: (n) => patch((q) => q.capping.fck = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "As bottom",
 					unit: "mm²",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3389,7 +3421,7 @@ function CappingPanel() {
 						onChange: (n) => patch((q) => q.capping.asBot = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "As top",
 					unit: "mm²",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3410,7 +3442,7 @@ function MaterialsPanel() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Factor source",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.factors.source,
@@ -3441,7 +3473,7 @@ function MaterialsPanel() {
 					"gammaCconc",
 					"gammaS",
 					"alphaCc"
-				].map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				].map((k) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: k,
 					source: p.factors.source === "user" ? "USER INPUT" : "CODE PARAMETER",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3450,7 +3482,7 @@ function MaterialsPanel() {
 						onChange: (n) => patch((q) => q.factors[k] = n)
 					})
 				}, k)),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Passive reduction",
 					source: "USER-DEFINED / PROJECT-SPECIFIC",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3459,7 +3491,7 @@ function MaterialsPanel() {
 						onChange: (n) => patch((q) => q.earth.passiveReduction = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Wall friction δ",
 					unit: "°",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3467,7 +3499,7 @@ function MaterialsPanel() {
 						onChange: (n) => patch((q) => q.earth.wallFriction = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "User Ka",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .01,
@@ -3475,7 +3507,7 @@ function MaterialsPanel() {
 						onChange: (n) => patch((q) => q.earth.userKa = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "User Kp",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .1,
@@ -3538,21 +3570,21 @@ function ApproachPanel() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-2",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "National Annex",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.codes.nationalAnnex,
 						onChange: (e) => patch((q) => q.codes.nationalAnnex = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Edition",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.codes.edition,
 						onChange: (e) => patch((q) => q.codes.edition = e.target.value)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "EN 1997 Design Approach",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.codes.designApproach,
@@ -3573,7 +3605,7 @@ function ApproachPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Design working life",
 					unit: "years",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3582,7 +3614,7 @@ function ApproachPanel() {
 						onChange: (n) => patch((q) => q.codes.designLife = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Consequence class",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.codes.consequenceClass,
@@ -3594,7 +3626,7 @@ function ApproachPanel() {
 						]
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Execution class",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 						value: p.codes.executionClass,
@@ -3629,7 +3661,7 @@ function LimitsPanel() {
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "grid gap-3 sm:grid-cols-3",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "η PASS limit",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .05,
@@ -3637,7 +3669,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.etaPass = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "η WARNING",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .05,
@@ -3645,7 +3677,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.etaWarn = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "δ absolute",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3653,7 +3685,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.deflAbs = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "δ span ratio H/n",
 					unit: "n",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3661,7 +3693,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.deflSpanRatio = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "wk limit",
 					unit: "mm",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -3670,7 +3702,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.wkLimit = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Allowable i",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 						step: .05,
@@ -3678,7 +3710,7 @@ function LimitsPanel() {
 						onChange: (n) => patch((q) => q.limits.iAllow = n)
 					})
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 					label: "Exposure",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextInput, {
 						value: p.limits.exposure,
@@ -3818,11 +3850,11 @@ function Report({ project, bundle, lc }) {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Callout, { children: "PRELIMINARY ENGINEERING DESIGN TOOL. This calculation depends on the accuracy of the input soil parameters, groundwater conditions, hydraulic assumptions, structural properties, load models, construction sequence and adopted design standards. The results shall be reviewed by a suitably qualified structural/geotechnical engineer before construction. A PASS on one check does not imply the flood protection structure is verified as a system." }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$4, {
 				title: "1. Design objective",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Verify the Option 3 U-shaped precast RC sheet-pile flood embankment with granular core, dual tie rods and RC capping beams for persistent, flood, construction, rapid-drawdown and accidental (tie failure) situations, separating structural, geotechnical and hydraulic limit states." })
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "2. Design basis",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
@@ -3868,7 +3900,7 @@ function Report({ project, bundle, lc }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$4, {
 				title: "3. Geometry and materials",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
 					className: "eng-table",
@@ -3899,7 +3931,7 @@ function Report({ project, bundle, lc }) {
 					] }, v.symbol)) })]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "4. Earth pressure",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -3953,7 +3985,7 @@ function Report({ project, bundle, lc }) {
 					}) : null
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "5. Structural analysis",
 				children: [
 					project.wallSystem === "cbp" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
@@ -4000,7 +4032,7 @@ function Report({ project, bundle, lc }) {
 					})] }) : null
 				]
 			}),
-			project.wallSystem === "cbp" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			project.wallSystem === "cbp" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "6. CBP structural check (EN 1992-1-1, circular section)",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -4032,7 +4064,7 @@ function Report({ project, bundle, lc }) {
 						})] })]
 					}) : null
 				]
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "6. RC section (EN 1992-1-1)",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Equation, {
@@ -4053,11 +4085,11 @@ function Report({ project, bundle, lc }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$4, {
 				title: "7. Verification of the selected load case",
 				children: lc ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckTable, { checks: lc.checks }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Select a load case." })
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "8. Utilization summary (governing across enabled cases)",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckTable, { checks: bundle.summary }), bundle.governing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 					className: "mt-3 text-sm",
@@ -4072,7 +4104,7 @@ function Report({ project, bundle, lc }) {
 					]
 				}) : null]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$4, {
 				title: "9. Calculation QC",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
 					className: "eng-table",
@@ -4092,14 +4124,14 @@ function Report({ project, bundle, lc }) {
 					] }, q.id)) })]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$4, {
 				title: "10. Warnings and limitations",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 					className: "list-disc pl-5 space-y-1 text-sm",
 					children: bundle.warnings.map((w) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: w }, w))
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$4, {
 				title: "11. Engineering conclusion",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: ["Based on the stated geometry, material properties, design actions, assumptions, applicable Eurocode provisions and National Annex parameters, the proposed U-shaped sheet-pile embankment has been verified for the checks identified in this calculation. Overall status: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusPill, { status: bundle.overall })] }),
@@ -4125,7 +4157,7 @@ function Report({ project, bundle, lc }) {
 		]
 	});
 }
-function Section$1({ title, children }) {
+function Section$4({ title, children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 		className: "mb-2 font-display text-sm font-semibold uppercase tracking-wider text-navy border-b border-rule pb-1",
 		children: title
@@ -4816,7 +4848,7 @@ function sigVCore(p, z, fillPlaced, roadPlaced, coreWL) {
 		eff: Math.max(0, tot - u)
 	};
 }
-function buildStations(p, water, opts) {
+function buildStations$1(p, water, opts) {
 	const top = p.geometry.riverbed + p.geometry.retainedHeight + (p.capping.enabled ? p.capping.h : 0);
 	const toe = p.geometry.riverbed - p.geometry.embedment;
 	const q = surcharge(p, opts.trafficOn, opts.constructionOn);
@@ -5643,7 +5675,7 @@ function analyseCase(p, lc, extras) {
 	const water = waterForCase(p, lc);
 	const fillPlaced = extras?.fillPlaced ?? true;
 	const roadPlaced = extras?.roadPlaced ?? true;
-	const stations = buildStations(p, water, {
+	const stations = buildStations$1(p, water, {
 		trafficOn: lc.trafficOn,
 		constructionOn: lc.constructionOn,
 		fillPlaced,
@@ -6385,7 +6417,7 @@ function ParametricBody() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "grid gap-3 sm:grid-cols-4",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Variable",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 							value: key,
@@ -6433,21 +6465,21 @@ function ParametricBody() {
 							]
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Min",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 							value: min,
 							onChange: setMin
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Max",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 							value: max,
 							onChange: setMax
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 						label: "Step",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 							value: step,
@@ -7696,6 +7728,417 @@ function ModuleDashboard() {
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
 												children: "Multi-Pile Layouts"
+											})
+										]
+									})
+								] }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: "w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View Module" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-4 group-hover:translate-x-1 transition-transform" })]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							onClick: () => setActiveModule("retaining-wall"),
+							className: "group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "absolute top-4 right-4",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: "inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" }), " Active"]
+									})
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+											viewBox: "0 0 240 140",
+											className: "w-full h-full",
+											fill: "none",
+											stroke: "currentColor",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "150",
+													y: "20",
+													width: "70",
+													height: "90",
+													fill: "rgba(125,102,80,0.25)",
+													stroke: "#a3866a",
+													strokeWidth: "1"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+													points: "150,50 150,110 110,110 130,50",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "55",
+													y: "110",
+													width: "165",
+													height: "18",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "150",
+													y1: "80",
+													x2: "175",
+													y2: "80",
+													stroke: "#f59e0b",
+													strokeWidth: "2",
+													markerEnd: "url(#rwArrow)"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "152",
+													y: "72",
+													fill: "#f59e0b",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "Pa"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("marker", {
+													id: "rwArrow",
+													markerWidth: "6",
+													markerHeight: "6",
+													refX: "5",
+													refY: "3",
+													orient: "auto",
+													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+														d: "M0,0 L6,3 L0,6 Z",
+														fill: "#f59e0b"
+													})
+												}) }),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "60",
+													y: "122",
+													fill: "#94a3b8",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "Toe"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "190",
+													y: "122",
+													fill: "#94a3b8",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "Heel"
+												})
+											]
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mb-4",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1",
+												children: "Earth-Retaining Structure"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+												className: "font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors",
+												children: "Cantilever RC Retaining Wall"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs text-slate-400 font-mono mt-2 leading-relaxed",
+												children: "Cantilever (T/L-shaped) reinforced concrete retaining wall on a spread footing. EN 1997-1 Design Approach 1 sliding, bearing and eccentricity checks plus EN 1992-1-1 stem, toe and heel design."
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap gap-1.5 mb-6",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Sliding & Bearing"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Stem / Toe / Heel"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "DA1-C1 / DA1-C2"
+											})
+										]
+									})
+								] }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: "w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View Module" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-4 group-hover:translate-x-1 transition-transform" })]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							onClick: () => setActiveModule("basement-wall"),
+							className: "group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "absolute top-4 right-4",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: "inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" }), " Active"]
+									})
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+											viewBox: "0 0 240 140",
+											className: "w-full h-full",
+											fill: "none",
+											stroke: "currentColor",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "150",
+													y: "15",
+													width: "70",
+													height: "95",
+													fill: "rgba(125,102,80,0.25)",
+													stroke: "#a3866a",
+													strokeWidth: "1"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "95",
+													y: "10",
+													width: "60",
+													height: "10",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "140",
+													y: "20",
+													width: "14",
+													height: "90",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "55",
+													y: "110",
+													width: "165",
+													height: "16",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+													cx: "147",
+													cy: "20",
+													r: "4",
+													fill: "#0b1a2c",
+													stroke: "#fef08a",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+													points: "154,22 168,60 154,108",
+													fill: "rgba(245,158,11,0.18)",
+													stroke: "#f59e0b",
+													strokeWidth: "1.2"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "170",
+													y: "65",
+													fill: "#f59e0b",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "K0/Ka"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "98",
+													y: "8",
+													fill: "#94a3b8",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "G.F. Slab (prop)"
+												})
+											]
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mb-4",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1",
+												children: "Earth-Retaining Structure"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+												className: "font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors",
+												children: "Basement Retaining Wall"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs text-slate-400 font-mono mt-2 leading-relaxed",
+												children: "Top-propped basement wall (base fixed, ground-floor slab prop). Construction-stage cantilever and permanent propped-stage force-method design, at-rest (K0) or active (Ka) earth pressure, two-face reinforcement."
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap gap-1.5 mb-6",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Top-Propped"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "K0 / Ka"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Two-Stage Design"
+											})
+										]
+									})
+								] }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: "w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "View Module" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-4 group-hover:translate-x-1 transition-transform" })]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							onClick: () => setActiveModule("wind-load"),
+							className: "group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "absolute top-4 right-4",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: "inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" }), " Active"]
+									})
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+											viewBox: "0 0 240 140",
+											className: "w-full h-full",
+											fill: "none",
+											stroke: "currentColor",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "10",
+													y1: "120",
+													x2: "230",
+													y2: "120",
+													stroke: "#334155",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+													x: "120",
+													y: "15",
+													width: "40",
+													height: "105",
+													fill: "rgba(30,58,95,0.4)",
+													stroke: "#38bdf8",
+													strokeWidth: "1.5"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "78",
+													y1: "100",
+													x2: "118",
+													y2: "100",
+													stroke: "#f59e0b",
+													strokeWidth: "1.5",
+													markerEnd: "url(#wlArrow)"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "68",
+													y1: "70",
+													x2: "118",
+													y2: "70",
+													stroke: "#f59e0b",
+													strokeWidth: "1.8",
+													markerEnd: "url(#wlArrow)"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "58",
+													y1: "40",
+													x2: "118",
+													y2: "40",
+													stroke: "#f59e0b",
+													strokeWidth: "2.2",
+													markerEnd: "url(#wlArrow)"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+													x1: "52",
+													y1: "20",
+													x2: "118",
+													y2: "20",
+													stroke: "#f59e0b",
+													strokeWidth: "2.6",
+													markerEnd: "url(#wlArrow)"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("marker", {
+													id: "wlArrow",
+													markerWidth: "6",
+													markerHeight: "6",
+													refX: "5",
+													refY: "3",
+													orient: "auto",
+													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+														d: "M0,0 L6,3 L0,6 Z",
+														fill: "#f59e0b"
+													})
+												}) }),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "128",
+													y: "12",
+													fill: "#94a3b8",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "H"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+													x: "40",
+													y: "16",
+													fill: "#f59e0b",
+													fontSize: "8",
+													fontFamily: "monospace",
+													children: "qp(z)"
+												})
+											]
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mb-4",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1",
+												children: "Wind Action on Structures"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+												className: "font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors",
+												children: "Wind Load on Tall Building"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+												className: "text-xs text-slate-400 font-mono mt-2 leading-relaxed",
+												children: "EN 1991-1-4 along-wind action on a rectangular prismatic tower: peak velocity pressure profile, force coefficients, Annex B structural factor (cscd), base shear/overturning moment, and comfort response."
+											})
+										]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap gap-1.5 mb-6",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Velocity Pressure Profile"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Structural Factor cscd"
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700",
+												children: "Base Shear & Overturning"
 											})
 										]
 									})
@@ -12442,18 +12885,18 @@ function BoredPileView() {
 		]
 	});
 }
-var UNIT_WEIGHT_CONCRETE = 25;
-var ES = 2e5;
-function round(value, decimals = 1) {
+var UNIT_WEIGHT_CONCRETE$1 = 25;
+var ES$2 = 2e5;
+function round$3(value, decimals = 1) {
 	return Math.round(value * 10 ** decimals) / 10 ** decimals;
 }
-function barArea(diameter) {
+function barArea$2(diameter) {
 	return Math.PI * diameter * diameter / 4;
 }
-function pos(x, fallback) {
+function pos$3(x, fallback) {
 	return Number.isFinite(x) && x > 0 ? x : fallback;
 }
-function nonNeg(x, fallback) {
+function nonNeg$3(x, fallback) {
 	return Number.isFinite(x) && x >= 0 ? x : fallback;
 }
 function analyzePileCap(project) {
@@ -12473,28 +12916,28 @@ function analyzePileCap(project) {
 		});
 	};
 	const p = {
-		fck: Math.max(10, pos(project.fck, 30)),
-		fyk: Math.max(400, pos(project.fyk, 500)),
-		gammaC: pos(project.gammaC, 1.5),
-		gammaS: pos(project.gammaS, 1.15),
+		fck: Math.max(10, pos$3(project.fck, 30)),
+		fyk: Math.max(400, pos$3(project.fyk, 500)),
+		gammaC: pos$3(project.gammaC, 1.5),
+		gammaS: pos$3(project.gammaS, 1.15),
 		alphaCC: Number.isFinite(project.alphaCC) ? project.alphaCC : .85,
-		cNom: Math.max(10, pos(project.cNom, 40)),
-		wMax: nonNeg(project.wMax, .3),
-		columnLengthX: pos(project.columnLengthX, 600),
-		columnWidthY: pos(project.columnWidthY, 400),
-		nEd: nonNeg(project.nEd, 0),
-		mEd: nonNeg(project.mEd, 0),
-		hEd: nonNeg(project.hEd, 0),
-		pileDiameter: pos(project.pileDiameter, 800),
-		pileSpacing: pos(project.pileSpacing, 2400),
-		capLength: pos(project.capLength, 3500),
-		capWidth: pos(project.capWidth, 1100),
-		capDepth: pos(project.capDepth, 1400),
-		tieBarDiameter: pos(project.tieBarDiameter, 25),
-		tieBarCount: Math.max(1, Math.round(pos(project.tieBarCount, 7))),
-		tieBandWidth: pos(project.tieBandWidth, 800),
-		nQp: nonNeg(project.nQp, 0),
-		mQp: nonNeg(project.mQp, 0)
+		cNom: Math.max(10, pos$3(project.cNom, 40)),
+		wMax: nonNeg$3(project.wMax, .3),
+		columnLengthX: pos$3(project.columnLengthX, 600),
+		columnWidthY: pos$3(project.columnWidthY, 400),
+		nEd: nonNeg$3(project.nEd, 0),
+		mEd: nonNeg$3(project.mEd, 0),
+		hEd: nonNeg$3(project.hEd, 0),
+		pileDiameter: pos$3(project.pileDiameter, 800),
+		pileSpacing: pos$3(project.pileSpacing, 2400),
+		capLength: pos$3(project.capLength, 3500),
+		capWidth: pos$3(project.capWidth, 1100),
+		capDepth: pos$3(project.capDepth, 1400),
+		tieBarDiameter: pos$3(project.tieBarDiameter, 25),
+		tieBarCount: Math.max(1, Math.round(pos$3(project.tieBarCount, 7))),
+		tieBandWidth: pos$3(project.tieBandWidth, 800),
+		nQp: nonNeg$3(project.nQp, 0),
+		mQp: nonNeg$3(project.mQp, 0)
 	};
 	const fcd = p.alphaCC * (p.fck / p.gammaC);
 	const fyd = p.fyk / p.gammaS;
@@ -12507,7 +12950,7 @@ function analyzePileCap(project) {
 	const strutAngleDeg = strutAngleRad * 180 / Math.PI;
 	const cotTheta = 1 / Math.tan(strutAngleRad);
 	const strutAngleOK = strutAngleDeg >= 45;
-	const capSelfWeight = p.capLength / 1e3 * (p.capWidth / 1e3) * (p.capDepth / 1e3) * UNIT_WEIGHT_CONCRETE;
+	const capSelfWeight = p.capLength / 1e3 * (p.capWidth / 1e3) * (p.capDepth / 1e3) * UNIT_WEIGHT_CONCRETE$1;
 	const totalN = p.nEd + 1.35 * capSelfWeight;
 	const totalM = p.mEd + p.hEd * (p.capDepth / 1e3);
 	const meanPerPile = totalN / 2;
@@ -12518,7 +12961,7 @@ function analyzePileCap(project) {
 	const tieForce = reactionHigh * cotTheta;
 	const strutForce = reactionHigh / Math.sin(strutAngleRad);
 	const asRequired = tieForce * 1e3 / fyd;
-	const asProvided = p.tieBarCount * barArea(p.tieBarDiameter);
+	const asProvided = p.tieBarCount * barArea$2(p.tieBarDiameter);
 	const rebarRatio = asProvided / (p.capWidth * d) * 100;
 	const asMin = Math.max(.26 * (fctm / p.fyk) * p.tieBandWidth * d, .0013 * p.tieBandWidth * d);
 	const strutArea = p.pileDiameter * p.capWidth;
@@ -12547,25 +12990,25 @@ function analyzePileCap(project) {
 	const sigmaSqp = (p.nQp / 2 + p.mQp / (p.pileSpacing / 1e3)) * cotTheta * 1e3 / asProvided;
 	const hMinusD = Math.max(10, p.capDepth - d);
 	const rhoPeff = slot(asProvided / (p.tieBandWidth * Math.min(2.5 * hMinusD, 100, p.capDepth / 2)));
-	const alphaE = ES / ecm;
+	const alphaE = ES$2 / ecm;
 	const kt = .4;
 	const srmax = 3.4 * p.cNom + .17 * p.tieBarDiameter / rhoPeff;
-	const crackWidth = srmax * Math.max((sigmaSqp - kt * (fctm / rhoPeff) * (1 + alphaE * rhoPeff)) / ES, .6 * sigmaSqp / ES);
+	const crackWidth = srmax * Math.max((sigmaSqp - kt * (fctm / rhoPeff) * (1 + alphaE * rhoPeff)) / ES$2, .6 * sigmaSqp / ES$2);
 	const fbd = 2.25 * (fctk005 / p.gammaC);
 	const anchorageLength = p.tieBarDiameter / 4 * (Math.min(sigmaSqp, fyd) / fbd);
 	const lengthPastPile = Math.max(0, (p.pileSpacing - p.pileDiameter) / 2 - p.cNom);
-	push("EQ-01", "Reaction equilibrium & uplift", "Geometry", reactionLow, "kN", 0, "kN", hasUplift ? 1 : safeRatio(reactionLow, reactionHigh), hasUplift ? "FAIL" : "PASS", "EN 1990 · ΣV");
-	push("GE-02", "Strut angle θ ≥ 45°", "Geometry", strutAngleDeg, "°", 45, "°", strutAngleOK ? safeRatio(45, strutAngleDeg) : 1, strutAngleOK ? "PASS" : "WARNING", "EC2 §6.5 · UK practice");
-	push("UL-03", "Tension tie As ≥ F_td/fyd", "ULS", asRequired, "mm²", asProvided, "mm²", safeRatio(asRequired, asProvided), passFail(asRequired, asProvided), "EN 1992-1-1 §6.5.3");
-	push("UL-04", "Strut compression (transverse tension)", "ULS", strutStressEd, "MPa", strutStressRd, "MPa", safeRatio(strutStressEd, strutStressRd), passFail(strutStressEd, strutStressRd), "EN 1992-1-1 §6.5.2 / (6.14)");
-	push("UL-05", "Column CCC node bearing", "ULS", nodeColStressEd, "MPa", nodeColStressRd, "MPa", safeRatio(nodeColStressEd, nodeColStressRd), passFail(nodeColStressEd, nodeColStressRd), "EN 1992-1-1 §6.5.4");
-	push("UL-06", "Pile CCT node bearing", "ULS", nodePileStressEd, "MPa", nodePileStressRd, "MPa", safeRatio(nodePileStressEd, nodePileStressRd), passFail(nodePileStressEd, nodePileStressRd), "EN 1992-1-1 §6.5.4");
-	push("UL-07", "Wide beam shear (enhanced)", "ULS", beamShearEd, "kN", beamShearRd, "kN", safeRatio(beamShearEd, beamShearRd), passFail(beamShearEd, beamShearRd), "EN 1992-1-1 §6.2.2(6)");
-	push("UL-08", "Column punching (2.0d perimeter)", "ULS", colPunchEd, "MPa", colPunchRd, "MPa", safeRatio(colPunchEd, colPunchRd), passFail(colPunchEd, colPunchRd), "EN 1992-1-1 §6.4.3/6.4.4");
-	push("UL-09", "Pile punching (2.0d perimeter)", "ULS", pilePunchEd, "MPa", pilePunchRd, "MPa", safeRatio(pilePunchEd, pilePunchRd), passFail(pilePunchEd, pilePunchRd), "EN 1992-1-1 §6.4.7");
-	push("UL-10", "Minimum reinforcement", "ULS", asMin, "mm²", asProvided, "mm²", safeRatio(asMin, asProvided), passFail(asMin, asProvided), "EN 1992-1-1 §9.2.1.1");
-	push("SL-11", "Tie steel stress (QP)", "SLS", sigmaSqp, "MPa", .8 * p.fyk, "MPa", safeRatio(sigmaSqp, .8 * p.fyk), passFail(sigmaSqp, .8 * p.fyk), "EN 1992-1-1 §7.2(2)");
-	push("SL-12", "Crack width (QP)", "SLS", crackWidth, "mm", p.wMax, "mm", safeRatio(crackWidth, p.wMax), passFail(crackWidth, p.wMax), "EN 1992-1-1 §7.3.4");
+	push("EQ-01", "Reaction equilibrium & uplift", "Geometry", reactionLow, "kN", 0, "kN", hasUplift ? 1 : safeRatio$3(reactionLow, reactionHigh), hasUplift ? "FAIL" : "PASS", "EN 1990 · ΣV");
+	push("GE-02", "Strut angle θ ≥ 45°", "Geometry", strutAngleDeg, "°", 45, "°", strutAngleOK ? safeRatio$3(45, strutAngleDeg) : 1, strutAngleOK ? "PASS" : "WARNING", "EC2 §6.5 · UK practice");
+	push("UL-03", "Tension tie As ≥ F_td/fyd", "ULS", asRequired, "mm²", asProvided, "mm²", safeRatio$3(asRequired, asProvided), passFail$3(asRequired, asProvided), "EN 1992-1-1 §6.5.3");
+	push("UL-04", "Strut compression (transverse tension)", "ULS", strutStressEd, "MPa", strutStressRd, "MPa", safeRatio$3(strutStressEd, strutStressRd), passFail$3(strutStressEd, strutStressRd), "EN 1992-1-1 §6.5.2 / (6.14)");
+	push("UL-05", "Column CCC node bearing", "ULS", nodeColStressEd, "MPa", nodeColStressRd, "MPa", safeRatio$3(nodeColStressEd, nodeColStressRd), passFail$3(nodeColStressEd, nodeColStressRd), "EN 1992-1-1 §6.5.4");
+	push("UL-06", "Pile CCT node bearing", "ULS", nodePileStressEd, "MPa", nodePileStressRd, "MPa", safeRatio$3(nodePileStressEd, nodePileStressRd), passFail$3(nodePileStressEd, nodePileStressRd), "EN 1992-1-1 §6.5.4");
+	push("UL-07", "Wide beam shear (enhanced)", "ULS", beamShearEd, "kN", beamShearRd, "kN", safeRatio$3(beamShearEd, beamShearRd), passFail$3(beamShearEd, beamShearRd), "EN 1992-1-1 §6.2.2(6)");
+	push("UL-08", "Column punching (2.0d perimeter)", "ULS", colPunchEd, "MPa", colPunchRd, "MPa", safeRatio$3(colPunchEd, colPunchRd), passFail$3(colPunchEd, colPunchRd), "EN 1992-1-1 §6.4.3/6.4.4");
+	push("UL-09", "Pile punching (2.0d perimeter)", "ULS", pilePunchEd, "MPa", pilePunchRd, "MPa", safeRatio$3(pilePunchEd, pilePunchRd), passFail$3(pilePunchEd, pilePunchRd), "EN 1992-1-1 §6.4.7");
+	push("UL-10", "Minimum reinforcement", "ULS", asMin, "mm²", asProvided, "mm²", safeRatio$3(asMin, asProvided), passFail$3(asMin, asProvided), "EN 1992-1-1 §9.2.1.1");
+	push("SL-11", "Tie steel stress (QP)", "SLS", sigmaSqp, "MPa", .8 * p.fyk, "MPa", safeRatio$3(sigmaSqp, .8 * p.fyk), passFail$3(sigmaSqp, .8 * p.fyk), "EN 1992-1-1 §7.2(2)");
+	push("SL-12", "Crack width (QP)", "SLS", crackWidth, "mm", p.wMax, "mm", safeRatio$3(crackWidth, p.wMax), passFail$3(crackWidth, p.wMax), "EN 1992-1-1 §7.3.4");
 	const listing = sortChecks(checks);
 	const utilizationMax = utilizationMaxOf(listing);
 	const failed = listing.find((c) => c.status === "FAIL");
@@ -12573,49 +13016,49 @@ function analyzePileCap(project) {
 	if (failed || hasUplift) overallStatus = "FAIL";
 	else if (listing.some((c) => c.status === "WARNING") || utilizationMax > .9) overallStatus = "WARNING";
 	return {
-		fcd: round(fcd),
-		fyd: round(fyd, 1),
-		fctm: round(fctm, 2),
-		fctk005: round(fctk005, 2),
-		nu1: round(nu1, 3),
+		fcd: round$3(fcd),
+		fyd: round$3(fyd, 1),
+		fctm: round$3(fctm, 2),
+		fctk005: round$3(fctk005, 2),
+		nu1: round$3(nu1, 3),
 		ecm: Math.round(ecm),
-		effectiveDepth: round(d),
-		strutAngleDeg: round(strutAngleDeg),
+		effectiveDepth: round$3(d),
+		strutAngleDeg: round$3(strutAngleDeg),
 		strutAngleOK,
-		capSelfWeight: round(capSelfWeight),
-		totalN: round(totalN),
-		totalM: round(totalM),
-		reactionHigh: round(reactionHigh),
-		reactionLow: round(reactionLow),
+		capSelfWeight: round$3(capSelfWeight),
+		totalN: round$3(totalN),
+		totalM: round$3(totalM),
+		reactionHigh: round$3(reactionHigh),
+		reactionLow: round$3(reactionLow),
 		hasUplift,
-		tieForce: round(tieForce),
-		strutForce: round(strutForce),
+		tieForce: round$3(tieForce),
+		strutForce: round$3(strutForce),
 		asRequired: Math.round(asRequired),
 		asProvided: Math.round(asProvided),
-		rebarRatio: round(rebarRatio, 2),
-		strutStressEd: round(strutStressEd, 2),
-		strutStressRd: round(strutStressRd, 2),
-		nodeColStressEd: round(nodeColStressEd, 2),
-		nodeColStressRd: round(nodeColStressRd, 2),
-		nodePileStressEd: round(nodePileStressEd, 2),
-		nodePileStressRd: round(nodePileStressRd, 2),
-		vRdc: round(vRdc, 3),
-		vRdmax: round(vRdmax, 2),
-		beamShearEd: round(beamShearEd),
-		beamShearRd: round(beamShearRd),
-		colPunchEd: round(colPunchEd, 3),
-		colPunchRd: round(colPunchRd, 3),
-		pilePunchEd: round(pilePunchEd, 3),
-		pilePunchRd: round(pilePunchRd, 3),
+		rebarRatio: round$3(rebarRatio, 2),
+		strutStressEd: round$3(strutStressEd, 2),
+		strutStressRd: round$3(strutStressRd, 2),
+		nodeColStressEd: round$3(nodeColStressEd, 2),
+		nodeColStressRd: round$3(nodeColStressRd, 2),
+		nodePileStressEd: round$3(nodePileStressEd, 2),
+		nodePileStressRd: round$3(nodePileStressRd, 2),
+		vRdc: round$3(vRdc, 3),
+		vRdmax: round$3(vRdmax, 2),
+		beamShearEd: round$3(beamShearEd),
+		beamShearRd: round$3(beamShearRd),
+		colPunchEd: round$3(colPunchEd, 3),
+		colPunchRd: round$3(colPunchRd, 3),
+		pilePunchEd: round$3(pilePunchEd, 3),
+		pilePunchRd: round$3(pilePunchRd, 3),
 		asMin: Math.round(asMin),
-		sigmaSqp: round(sigmaSqp),
-		crackWidth: round(crackWidth, 3),
+		sigmaSqp: round$3(sigmaSqp),
+		crackWidth: round$3(crackWidth, 3),
 		crackLimit: p.wMax,
 		srmax: Math.round(srmax),
 		anchorageLength: Math.round(anchorageLength),
 		lengthPastPile: Math.round(lengthPastPile),
 		checks: listing,
-		utilizationMax: round(utilizationMax, 2),
+		utilizationMax: round$3(utilizationMax, 2),
 		governingName: listing[0]?.name ?? "—",
 		overallStatus
 	};
@@ -12623,12 +13066,12 @@ function analyzePileCap(project) {
 function slot(value) {
 	return Math.max(1e-4, value);
 }
-function safeRatio(demand, resistance) {
+function safeRatio$3(demand, resistance) {
 	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return 1;
 	if (resistance <= 0) return 1;
-	return round(demand / resistance, 3);
+	return round$3(demand / resistance, 3);
 }
-function passFail(demand, resistance) {
+function passFail$3(demand, resistance) {
 	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return "NOT VERIFIED";
 	return demand > resistance ? "FAIL" : "PASS";
 }
@@ -12671,7 +13114,7 @@ var defaultPileCapProject = () => ({
 	nQp: 1800,
 	mQp: 120
 });
-function StatusBadge({ status }) {
+function StatusBadge$3({ status }) {
 	const cls = status === "PASS" ? "bg-emerald-950 border-emerald-600 text-emerald-400" : status === "WARNING" ? "bg-amber-950 border-amber-600 text-amber-300" : status === "FAIL" ? "bg-rose-950 border-rose-600 text-rose-400" : "bg-slate-800 border-slate-600 text-slate-300";
 	const icon = status === "PASS" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "size-3" }) : status === "WARNING" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" });
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
@@ -12679,7 +13122,7 @@ function StatusBadge({ status }) {
 		children: [icon, status]
 	});
 }
-function StatCard({ label, value, unit, sub, tone = "cyan" }) {
+function StatCard$3({ label, value, unit, sub, tone = "cyan" }) {
 	const color = {
 		cyan: "text-cyan-300",
 		white: "text-white",
@@ -12712,7 +13155,7 @@ function StatCard({ label, value, unit, sub, tone = "cyan" }) {
 		]
 	});
 }
-function NumField({ label, value, unit, onChange, min, max, step = 1 }) {
+function NumField$3({ label, value, unit, onChange, min, max, step = 1 }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
 		className: "block",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
@@ -12729,7 +13172,7 @@ function NumField({ label, value, unit, onChange, min, max, step = 1 }) {
 		})]
 	});
 }
-function Field({ label, children }) {
+function Field$3({ label, children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
 		className: "block",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -12738,7 +13181,7 @@ function Field({ label, children }) {
 		}), children]
 	});
 }
-function Section({ title, hint, children }) {
+function Section$3({ title, hint, children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -12753,7 +13196,7 @@ function Section({ title, hint, children }) {
 		}), children]
 	});
 }
-function ChecksTable({ checks }) {
+function ChecksTable$3({ checks }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "overflow-x-auto",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
@@ -12830,7 +13273,7 @@ function ChecksTable({ checks }) {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
 							className: "p-3",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, { status: c.status })
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge$3, { status: c.status })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
 							className: "p-3 text-slate-500",
@@ -12842,13 +13285,13 @@ function ChecksTable({ checks }) {
 		})
 	});
 }
-function Eq({ children }) {
+function Eq$3({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "rounded-lg bg-[#03070e] border border-cyan-900/60 p-3 font-mono text-xs text-cyan-100 overflow-x-auto",
 		children
 	});
 }
-var MONO = "JetBrains Mono, monospace";
+var MONO$3 = "JetBrains Mono, monospace";
 function PileCapElevation({ project, result }) {
 	const W = 760;
 	const H = 400;
@@ -12917,7 +13360,7 @@ function PileCapElevation({ project, result }) {
 				textAnchor: "middle",
 				fill: "#7dd3fc",
 				fontSize: "11",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"R-max ",
 					result.reactionHigh.toFixed(0),
@@ -12930,7 +13373,7 @@ function PileCapElevation({ project, result }) {
 				textAnchor: "middle",
 				fill: "#7dd3fc",
 				fontSize: "11",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"R-min ",
 					result.reactionLow.toFixed(0),
@@ -12961,7 +13404,7 @@ function PileCapElevation({ project, result }) {
 				textAnchor: "middle",
 				fill: "#cbd5e1",
 				fontSize: "11",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"Column N=",
 					project.nEd,
@@ -13000,7 +13443,7 @@ function PileCapElevation({ project, result }) {
 				textAnchor: "middle",
 				fill: "#22d3ee",
 				fontSize: "11",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"T = ",
 					result.tieForce.toFixed(0),
@@ -13033,7 +13476,7 @@ function PileCapElevation({ project, result }) {
 					textAnchor: "middle",
 					fill: "#cbd5e1",
 					fontSize: "10",
-					fontFamily: MONO,
+					fontFamily: MONO$3,
 					children: "θ"
 				})
 			] }),
@@ -13042,7 +13485,7 @@ function PileCapElevation({ project, result }) {
 				y: (colBaseY + pileTopY) / 2 - 10,
 				fill: "#f59e0b",
 				fontSize: "10",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"θ = ",
 					result.strutAngleDeg.toFixed(1),
@@ -13056,7 +13499,7 @@ function PileCapElevation({ project, result }) {
 				cx: colX,
 				y: 370
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line$1, {
 				label: "c",
 				x: scaleX(project.capLength),
 				y1: colBaseY - 26,
@@ -13068,7 +13511,7 @@ function PileCapElevation({ project, result }) {
 				y: colBaseY + 8,
 				fill: "#94a3b8",
 				fontSize: "10",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: "G.L."
 			})
 		]
@@ -13123,7 +13566,7 @@ function PileCapPlan({ project, result }) {
 				textAnchor: "middle",
 				fill: "#7dd3fc",
 				fontSize: "9",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: ["Ø", project.pileDiameter]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
@@ -13132,7 +13575,7 @@ function PileCapPlan({ project, result }) {
 				textAnchor: "middle",
 				fill: "#7dd3fc",
 				fontSize: "9",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: ["Ø", project.pileDiameter]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
@@ -13150,7 +13593,7 @@ function PileCapPlan({ project, result }) {
 				textAnchor: "middle",
 				fill: "#cbd5e1",
 				fontSize: "9",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					project.columnLengthX,
 					"×",
@@ -13172,7 +13615,7 @@ function PileCapPlan({ project, result }) {
 				y: H / 2 - project.tieBandWidth / capW * 280 / 2 - 6,
 				fill: "#22d3ee",
 				fontSize: "9",
-				fontFamily: MONO,
+				fontFamily: MONO$3,
 				children: [
 					"tie band ",
 					project.tieBandWidth,
@@ -13229,12 +13672,12 @@ function Dim({ label, x1, x2, cx, y }) {
 			textAnchor: "middle",
 			fill: "#cbd5e1",
 			fontSize: "10",
-			fontFamily: MONO,
+			fontFamily: MONO$3,
 			children: label
 		})
 	] });
 }
-function Line({ label, x, y1, y2, cy }) {
+function Line$1({ label, x, y1, y2, cy }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("g", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
 			x1: x,
@@ -13266,12 +13709,12 @@ function Line({ label, x, y1, y2, cy }) {
 			textAnchor: "end",
 			fill: "#cbd5e1",
 			fontSize: "10",
-			fontFamily: MONO,
+			fontFamily: MONO$3,
 			children: label
 		})
 	] });
 }
-function OverviewTab({ body, setActiveTab }) {
+function OverviewTab$3({ body, setActiveTab }) {
 	const { project, res, pad } = body;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
@@ -13279,26 +13722,26 @@ function OverviewTab({ body, setActiveTab }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "grid grid-cols-1 md:grid-cols-4 gap-4",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 						label: "Design Axial (N_Ed)",
 						value: `${project.nEd}`,
 						unit: "kN",
 						sub: "ULS compression, input"
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 						label: "Tie Force (F_td)",
 						value: `${res.tieForce}`,
 						unit: "kN",
 						sub: `θ = ${res.strutAngleDeg}° · cotθ = ${res.reactionHigh > 0 ? (res.tieForce / res.reactionHigh).toFixed(3) : "—"}`
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 						label: "Tie Reinforcement",
 						value: `${res.asProvided}`,
 						unit: "mm²",
 						sub: `required ${res.asRequired} mm²`,
 						tone: res.asProvided >= res.asRequired ? "emerald" : "rose"
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 						label: "Overall Status",
 						value: res.overallStatus,
 						sub: `max UR ${res.utilizationMax}`,
@@ -13512,7 +13955,7 @@ function OverviewTab({ body, setActiveTab }) {
 		]
 	});
 }
-var CONCRETE_GRADES = [
+var CONCRETE_GRADES$2 = [
 	["C25/30", 25],
 	["C30/37", 30],
 	["C35/45", 35],
@@ -13524,17 +13967,17 @@ var STEEL_GRADES = [
 	["B500B", 500],
 	["B500C", 500]
 ];
-var EXPOSURE = [
+var EXPOSURE$2 = [
 	["XC1", .4],
 	["XC2", .3],
 	["XC3", .3],
 	["XC4", .3],
 	["XD1/XS1", .3]
 ];
-function GeometryTab({ body }) {
+function GeometryTab$2({ body }) {
 	const { project, res, pad } = body;
 	const setGrade = (fck) => {
-		const grade = CONCRETE_GRADES.find(([, f]) => f === fck);
+		const grade = CONCRETE_GRADES$2.find(([, f]) => f === fck);
 		pad({
 			fck,
 			concreteGrade: grade ? grade[0] : project.concreteGrade
@@ -13545,7 +13988,7 @@ function GeometryTab({ body }) {
 		steelGrade: fyk === 500 ? "B500C" : project.steelGrade
 	});
 	const setExposure = (exposureClass) => {
-		const found = EXPOSURE.find(([e]) => e === exposureClass);
+		const found = EXPOSURE$2.find(([e]) => e === exposureClass);
 		pad({
 			exposureClass,
 			wMax: found ? found[1] : project.wMax
@@ -13554,37 +13997,37 @@ function GeometryTab({ body }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Column & Design Actions",
 				hint: "Factored ULS actions applied at the base of the column (top of cap)",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-5 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Column length X",
 							value: project.columnLengthX,
 							unit: "mm",
 							onChange: (v) => pad({ columnLengthX: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Column width Y",
 							value: project.columnWidthY,
 							unit: "mm",
 							onChange: (v) => pad({ columnWidthY: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "N_Ed",
 							value: project.nEd,
 							unit: "kN",
 							onChange: (v) => pad({ nEd: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "M_Ed",
 							value: project.mEd,
 							unit: "kNm",
 							onChange: (v) => pad({ mEd: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "H_Ed (at cap top)",
 							value: project.hEd,
 							unit: "kN",
@@ -13596,37 +14039,37 @@ function GeometryTab({ body }) {
 					children: "X is parallel to the line of piles. M_Ed and H_Ed act in that plane. H_Ed adds a lever-arm moment to the cap base."
 				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Piles & Cap Geometry",
 				hint: "Two bored piles, concentrated bottom tie in the band between them",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-5 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Pile diameter",
 							value: project.pileDiameter,
 							unit: "mm",
 							onChange: (v) => pad({ pileDiameter: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Pile spacing s",
 							value: project.pileSpacing,
 							unit: "mm",
 							onChange: (v) => pad({ pileSpacing: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Cap length",
 							value: project.capLength,
 							unit: "mm",
 							onChange: (v) => pad({ capLength: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Cap width",
 							value: project.capWidth,
 							unit: "mm",
 							onChange: (v) => pad({ capWidth: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Cap depth h",
 							value: project.capDepth,
 							unit: "mm",
@@ -13635,31 +14078,31 @@ function GeometryTab({ body }) {
 					]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Materials",
 				hint: "Concrete and reinforcement grades. αcc = 0.85 (UK NA).",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$3, {
 							label: "Concrete grade",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
 								value: project.fck,
 								onChange: (e) => setGrade(Number(e.target.value)),
 								className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
-								children: CONCRETE_GRADES.map(([g, f]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								children: CONCRETE_GRADES$2.map(([g, f]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 									value: f,
 									children: g
 								}, g))
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "fck",
 							value: project.fck,
 							unit: "MPa",
 							onChange: setGrade
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$3, {
 							label: "Steel grade",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
 								value: project.fyk,
@@ -13671,7 +14114,7 @@ function GeometryTab({ body }) {
 								}, g))
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "fyk",
 							value: project.fyk,
 							unit: "MPa",
@@ -13681,25 +14124,25 @@ function GeometryTab({ body }) {
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "γC",
 							value: project.gammaC,
 							step: .05,
 							onChange: (v) => pad({ gammaC: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "γS",
 							value: project.gammaS,
 							step: .05,
 							onChange: (v) => pad({ gammaS: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "αcc (UK NA)",
 							value: project.alphaCC,
 							step: .05,
 							onChange: (v) => pad({ alphaCC: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Design strengths",
 							value: `${res.fcd}`,
 							unit: `/ ${res.fyd}`,
@@ -13709,38 +14152,38 @@ function GeometryTab({ body }) {
 					]
 				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Durability & SLS",
 				hint: "Exposure class fixes the crack limit used in §7.3.4",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$3, {
 							label: "Exposure class",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
 								value: project.exposureClass,
 								onChange: (e) => setExposure(e.target.value),
 								className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
-								children: EXPOSURE.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+								children: EXPOSURE$2.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
 									value: e.replace("/", "_"),
 									children: e
 								}, e))
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Nominal cover c_nom",
 							value: project.cNom,
 							unit: "mm",
 							onChange: (v) => pad({ cNom: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Crack limit w_max",
 							value: project.wMax,
 							unit: "mm",
 							step: .05,
 							onChange: (v) => pad({ wMax: v })
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 							label: "Design life",
 							value: project.designLife,
 							unit: "y",
@@ -13749,17 +14192,17 @@ function GeometryTab({ body }) {
 					]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Quasi-permanent SLS actions",
 				hint: "Used for crack width and steel stress checks (§7.3.4)",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-2 gap-4",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 						label: "N_Qp (axial)",
 						value: project.nQp,
 						unit: "kN",
 						onChange: (v) => pad({ nQp: v })
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 						label: "M_Qp (moment)",
 						value: project.mQp,
 						unit: "kNm",
@@ -13767,32 +14210,32 @@ function GeometryTab({ body }) {
 					})]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Derived Geometry & Actions",
 				hint: "Live traceable derivation",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Effective depth (d)",
 							value: `${res.effectiveDepth}`,
 							unit: "mm",
 							sub: "h − c_nom − Ø/2"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Cap self weight",
 							value: `${res.capSelfWeight}`,
 							unit: "kN",
 							sub: "25 kN/m³ · characteristic"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Total design N + M",
 							value: `${res.totalN}`,
 							unit: "kN",
 							sub: `M = ${res.totalM} kNm`,
 							tone: "white"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Pile reactions",
 							value: `${res.reactionHigh}`,
 							unit: "kN",
@@ -13802,7 +14245,7 @@ function GeometryTab({ body }) {
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-4 grid gap-3 lg:grid-cols-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 						"R₁ = N_tot/2 + M_tot/s = ",
 						res.totalN,
 						"/2 + ",
@@ -13823,7 +14266,7 @@ function GeometryTab({ body }) {
 							res.totalN,
 							" kN"
 						]
-					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 						"θ = atan(2d/s) = atan(2×",
 						res.effectiveDepth,
 						"/",
@@ -13855,7 +14298,7 @@ function StmTab({ body }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Strut-and-Tie Model",
 				hint: "EN 1992-1-1 §6.5 — column load carried by two diagonal struts to the pile tops; bottom tension tie between piles",
 				children: [
@@ -13866,32 +14309,32 @@ function StmTab({ body }) {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "grid grid-cols-2 md:grid-cols-5 gap-4 mt-4",
 						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "Strut angle θ",
 								value: `${res.strutAngleDeg}`,
 								unit: "°",
 								sub: "≥ 45° UK practice",
 								tone: res.strutAngleOK ? "emerald" : "amber"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "Tie force F_td",
 								value: `${res.tieForce}`,
 								unit: "kN",
 								sub: "governing pile side"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "Strut force C",
 								value: `${res.strutForce}`,
 								unit: "kN",
 								sub: "per governing strut"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "As required",
 								value: `${res.asRequired}`,
 								unit: "mm²",
 								sub: "F_td / fyd"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "As provided",
 								value: `${res.asProvided}`,
 								unit: "mm²",
@@ -13902,7 +14345,7 @@ function StmTab({ body }) {
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "mt-4 grid gap-3 lg:grid-cols-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 							"T = R_max·cotθ = ",
 							res.reactionHigh,
 							" × ",
@@ -13919,7 +14362,7 @@ function StmTab({ body }) {
 								res.effectiveDepth,
 								")"
 							]
-						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 							"C = R_max / sinθ = ",
 							res.reactionHigh,
 							" / ",
@@ -13942,12 +14385,12 @@ function StmTab({ body }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "ULS Verification Matrix",
 				hint: "Every ULS check with demand / resistance / utilization / status",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: [...geometry, ...uls] })
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$3, { checks: [...geometry, ...uls] })
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Strut & Node Stresses",
 				hint: "Concrete efficiency factors — transverse-tension strut 0.6·ν1, CCC node 1.0·fcd, CCT node 0.8·fcd",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -14050,25 +14493,25 @@ function ShearTab({ body }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Concrete Shear Resistance",
 				hint: "v_Rd,c per §6.4.4 — governing denominator for both beam shear and punching",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-1 md:grid-cols-3 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "v_Rd,c (basic)",
 							value: `${res.vRdc}`,
 							unit: "MPa",
 							sub: "max(k·…, v_min) without shear steel"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "v_Rd,max (crushing)",
 							value: `${res.vRdmax}`,
 							unit: "MPa",
 							sub: "0.5·ν1·fcd — adjacent to loaded area"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Reinforcement ρl",
 							value: `${res.rebarRatio}`,
 							unit: "%",
@@ -14077,26 +14520,26 @@ function ShearTab({ body }) {
 					]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Wide Beam Shear",
 				hint: "§6.2 / §6.2.2(6) — vertical plane at distance d from the pile face; enhancement β = 2d/a_v since load sits within 2.5d",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-1 md:grid-cols-3 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "V_Ed (critical section)",
 							value: `${res.beamShearEd}`,
 							unit: "kN",
 							sub: "governing pile reaction"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "V_Rd (enhanced)",
 							value: `${res.beamShearRd}`,
 							unit: "kN",
 							sub: "β·v_Rd,c·b·d",
 							tone: res.beamShearRd >= res.beamShearEd ? "emerald" : "rose"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Utilization",
 							value: `${uBeamDemand ? uBeamDemand.utilization.toFixed(2) : "—"}`,
 							sub: uBeamDemand?.status ?? "—",
@@ -14105,7 +14548,7 @@ function ShearTab({ body }) {
 					]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Punching Shear",
 				hint: "§6.4 — control perimeter at 2.0d from column and pile faces; pile caps §6.4.7",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -14182,10 +14625,10 @@ function ShearTab({ body }) {
 					})]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Check Detail",
 				hint: "Traceable demand / resistance pairings",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: uls })
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$3, { checks: uls })
 			})
 		]
 	});
@@ -14195,34 +14638,34 @@ function SlsTab({ body }) {
 	const sls = res.checks.filter((c) => c.category === "SLS");
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 			title: "Crack Width — Tension Tie (§7.3.4)",
 			hint: "Quasi-permanent combination; semi-empirical method against the exposure-dependent limit",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-1 md:grid-cols-4 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Steel stress σs (QP)",
 							value: `${res.sigmaSqp}`,
 							unit: "MPa",
 							sub: "F_td,Qp / As,prov",
 							tone: res.sigmaSqp > .8 * project.fyk ? "rose" : "cyan"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Crack width w_k",
 							value: `${res.crackWidth}`,
 							unit: "mm",
 							sub: `s_r,max × Δε`,
 							tone: res.crackWidth <= res.crackLimit ? "emerald" : "rose"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Limit w_max",
 							value: `${res.crackLimit}`,
 							unit: "mm",
 							sub: `exposure ${project.exposureClass}`
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Spacing s_r,max",
 							value: `${res.srmax}`,
 							unit: "mm",
@@ -14232,7 +14675,7 @@ function SlsTab({ body }) {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-4 grid gap-3 lg:grid-cols-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "εsm − εcm = (σs − kt·(fctm/ρp,eff)·(1+αe·ρp,eff)) / Es" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "εsm − εcm = (σs − kt·(fctm/ρp,eff)·(1+αe·ρp,eff)) / Es" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "text-slate-400 mt-1",
 						children: [
 							"σs = ",
@@ -14242,7 +14685,7 @@ function SlsTab({ body }) {
 							" MPa · αe = Es/Ecm = ",
 							res.ecm > 0 ? (2e5 / res.ecm).toFixed(2) : "—"
 						]
-					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 						"w_k = 3.4c + 0.425·k1·k2·Ø/ρp,eff × Δε = ",
 						res.srmax,
 						" × … = ",
@@ -14268,14 +14711,14 @@ function SlsTab({ body }) {
 					]
 				})
 			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 			title: "Check Detail",
 			hint: "Traceable demand / resistance pairings",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: sls })
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$3, { checks: sls })
 		})]
 	});
 }
-function DetailingTab({ body }) {
+function DetailingTab$2({ body }) {
 	const { project, res, pad } = body;
 	const minCheck = res.checks.find((c) => c.id === "UL-10");
 	const barsAcross = project.tieBarCount;
@@ -14285,31 +14728,31 @@ function DetailingTab({ body }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Bottom Tie Rebar Schedule",
 				hint: "Concentrated band between the piles — placement, spacing and minimum steel",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
 						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 								label: "Bar diameter",
 								value: project.tieBarDiameter,
 								unit: "mm",
 								onChange: (v) => pad({ tieBarDiameter: v })
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 								label: "Number of bars",
 								value: project.tieBarCount,
 								onChange: (v) => pad({ tieBarCount: v })
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 								label: "Band width",
 								value: project.tieBandWidth,
 								unit: "mm",
 								onChange: (v) => pad({ tieBandWidth: v })
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$3, {
 								label: "Nominal cover",
 								value: project.cNom,
 								unit: "mm",
@@ -14320,27 +14763,27 @@ function DetailingTab({ body }) {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-4",
 						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "As provided",
 								value: `${res.asProvided}`,
 								unit: "mm²",
 								sub: `required ${res.asRequired}`,
 								tone: res.asProvided >= res.asRequired ? "emerald" : "rose"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "As,min (§9.2.1.1)",
 								value: `${res.asMin}`,
 								unit: "mm²",
 								sub: `max(0.26fctm/fyk·bd, 0.0013bd)`,
 								tone: minCheck?.status === "PASS" ? "emerald" : "rose"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "Layers / bars",
 								value: `${layers} × ${barsPerLayer}`,
 								sub: "staggered within band",
 								tone: "white"
 							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 								label: "Clear spacing",
 								value: `${clearSpacingLayer > 80 ? clearSpacingLayer.toFixed(0) : clearSpacingLayer.toFixed(0)}`,
 								unit: "mm",
@@ -14351,7 +14794,7 @@ function DetailingTab({ body }) {
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "mt-4",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$3, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 							"As,min = max(0.26×(fctm/fyk)×b×d, 0.0013×b×d) = max(0.26×",
 							res.fctm,
 							"/",
@@ -14388,26 +14831,26 @@ function DetailingTab({ body }) {
 					})
 				]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$3, {
 				title: "Anchorage & Detailing",
 				hint: "Tie bars must develop their force beyond the pile faces",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-1 md:grid-cols-3 gap-4",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Anchorage l_bd (basic)",
 							value: `${res.anchorageLength}`,
 							unit: "mm",
 							sub: `(Ø/4)·(σs_lim/fbd), fbd = 2.25·fctk,0.05/γC`
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Straight length past pile",
 							value: `${res.lengthPastPile}`,
 							unit: "mm",
 							sub: "(s − Ø_pile)/2 − cover",
 							tone: res.lengthPastPile >= .6 * res.anchorageLength ? "emerald" : res.lengthPastPile >= res.anchorageLength ? "emerald" : "amber"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$3, {
 							label: "Anchorage ratio",
 							value: `${res.lengthPastPile > 0 ? (res.lengthPastPile / Math.max(1, res.anchorageLength)).toFixed(2) : "—"}`,
 							sub: "available / required",
@@ -14423,10 +14866,10 @@ function DetailingTab({ body }) {
 					]
 				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$3, {
 				title: "Check Detail",
 				hint: "Minimum reinforcement verification",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: res.checks.filter((c) => [
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$3, { checks: res.checks.filter((c) => [
 					"UL-10",
 					"EQ-01",
 					"GE-02"
@@ -14439,7 +14882,7 @@ function DetailingTab({ body }) {
 		]
 	});
 }
-function ReportTab({ body }) {
+function ReportTab$3({ body }) {
 	const { project, res } = body;
 	const row = (id, descr, demand, resistance) => {
 		const u = res.checks.find((x) => x.id === id)?.utilization ?? 0;
@@ -14718,7 +15161,7 @@ function ReportTab({ body }) {
 		})]
 	});
 }
-var TABS = [
+var TABS$3 = [
 	{
 		id: "overview",
 		label: "1. Overview & HUD",
@@ -14814,6 +15257,6358 @@ function PileCapView() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "relative z-15 bg-[#040910]/90 border-b border-[#1e3a5f]/80 px-6 flex overflow-x-auto gap-1 font-mono text-xs",
+				children: TABS$3.map((tab) => {
+					const Icon = tab.icon;
+					const isActive = activeTab === tab.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab(tab.id),
+						className: `flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition whitespace-nowrap ${isActive ? "border-cyan-400 text-cyan-300 bg-cyan-950/40" : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"}`,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { className: `size-4 ${isActive ? "text-cyan-400" : "text-slate-500"}` }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: tab.label })]
+					}, tab.id);
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "relative z-10 flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 flex flex-col",
+				children: [
+					activeTab === "overview" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OverviewTab$3, {
+						body: {
+							project,
+							res,
+							pad
+						},
+						setActiveTab
+					}),
+					activeTab === "geometry" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeometryTab$2, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "stm" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StmTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "shear" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShearTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "sls" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SlsTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "detailing" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailingTab$2, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "report" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReportTab$3, { body: {
+						project,
+						res,
+						pad
+					} })
+				]
+			})
+		]
+	});
+}
+var UNIT_WEIGHT_CONCRETE = 25;
+var GAMMA_W$1 = 9.81;
+var ES$1 = 2e5;
+var DA1_C1$1 = {
+	label: "DA1-C1",
+	gammaGUnfav: 1.35,
+	gammaGFav: 1,
+	gammaQ: 1.5,
+	gammaPhi: 1,
+	gammaC: 1,
+	gammaRh: 1,
+	gammaRv: 1
+};
+var DA1_C2$1 = {
+	label: "DA1-C2",
+	gammaGUnfav: 1,
+	gammaGFav: 1,
+	gammaQ: 1.3,
+	gammaPhi: 1.25,
+	gammaC: 1.25,
+	gammaRh: 1,
+	gammaRv: 1
+};
+function round$2(value, decimals = 1) {
+	return Math.round(value * 10 ** decimals) / 10 ** decimals;
+}
+function barArea$1(diameter) {
+	return Math.PI * diameter * diameter / 4;
+}
+function pos$2(x, fallback) {
+	return Number.isFinite(x) && x > 0 ? x : fallback;
+}
+function nonNeg$2(x, fallback) {
+	return Number.isFinite(x) && x >= 0 ? x : fallback;
+}
+function safeRatio$2(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return 1;
+	if (resistance <= 0) return demand > 0 ? 999 : 0;
+	return round$2(Math.abs(demand) / resistance, 3);
+}
+function passFail$2(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return "NOT VERIFIED";
+	return Math.abs(demand) > resistance ? "FAIL" : "PASS";
+}
+/** Design (factored) friction angle per EN 1997-1 Annex A: phi_d = atan(tan(phi_k)/gamma_phi). */
+function designPhi$1(phiDeg, gammaPhi) {
+	return Math.atan(Math.tan(toRad(phiDeg)) / gammaPhi) / toRad(1);
+}
+/**
+* Horizontal earth/water/surcharge actions on a vertical plane of given height (from the
+* retained surface down to the reference level), using a two-zone (dry/buoyant) unit weight
+* split about a water table depth measured from that same surface. Reused for both the
+* full wall height (stability) and the stem-only height (stem flexure/shear) by passing a
+* different heightM. Integration reuses the existing trap()/trapMoment() helpers from the
+* sheet-pile engine rather than re-deriving trapezoidal force/moment formulas.
+*/
+function earthActions(heightM, kaD, gammaK, waterDepthFromTopM, surchargeKpa) {
+	if (heightM <= 0) return {
+		earthForce: 0,
+		earthMoment: 0,
+		waterForce: 0,
+		waterMoment: 0,
+		surchargeForce: 0,
+		surchargeMoment: 0
+	};
+	const zw = Math.min(Math.max(waterDepthFromTopM, 0), heightM);
+	const z = zw > 1e-6 && zw < heightM - 1e-6 ? [
+		0,
+		zw,
+		heightM
+	] : [0, heightM];
+	const earthP = z.map((zi) => {
+		return kaD * (zi <= zw ? gammaK * zi : gammaK * zw + Math.max(0, gammaK - GAMMA_W$1) * (zi - zw));
+	});
+	const waterP = z.map((zi) => zi > zw ? GAMMA_W$1 * (zi - zw) : 0);
+	const earthForce = trap(earthP, z);
+	const earthMoment = -trapMoment(earthP, z, heightM);
+	const waterForce = trap(waterP, z);
+	const waterMoment = -trapMoment(waterP, z, heightM);
+	const surchargeForce = kaD * surchargeKpa * heightM;
+	return {
+		earthForce,
+		earthMoment,
+		waterForce,
+		waterMoment,
+		surchargeForce,
+		surchargeMoment: surchargeForce * (heightM / 2)
+	};
+}
+/** Weight of a soil column of given total depth split into dry (top) / buoyant (below water table) zones. */
+function layeredSoilWeight(widthM, depthM, gammaK, waterDepthFromSurfaceM) {
+	if (depthM <= 0 || widthM <= 0) return 0;
+	const dry = Math.min(depthM, Math.max(0, waterDepthFromSurfaceM));
+	const sub = Math.max(0, depthM - dry);
+	return widthM * (gammaK * dry + Math.max(0, gammaK - GAMMA_W$1) * sub);
+}
+/** Trapezoidal load resultant + centroid, x measured from the free end (x=0) to the fixed end (x=L). */
+function trapLoad(qAtFreeEnd, qAtFixedEnd, length) {
+	const resultant = .5 * (qAtFreeEnd + qAtFixedEnd) * length;
+	const denom = qAtFreeEnd + qAtFixedEnd;
+	return {
+		resultant,
+		centroidFromFreeEnd: Math.abs(denom) < 1e-9 ? length / 2 : length * (qAtFreeEnd + 2 * qAtFixedEnd) / (3 * denom)
+	};
+}
+/** Base contact pressure at each edge for a strip footing under N (kN/m) with signed eccentricity e (m) from centreline. */
+function basePressure(nDesign, baseWidthM, eSigned) {
+	const eAbs = Math.abs(eSigned);
+	if (eAbs <= baseWidthM / 6) {
+		const qToe = nDesign / baseWidthM * (1 - 6 * eSigned / baseWidthM);
+		const qHeel = nDesign / baseWidthM * (1 + 6 * eSigned / baseWidthM);
+		return {
+			qToe: Math.max(0, qToe),
+			qHeel: Math.max(0, qHeel),
+			resultantWithinBase: true
+		};
+	}
+	if (eAbs >= baseWidthM / 2) return {
+		qToe: 0,
+		qHeel: 0,
+		resultantWithinBase: false
+	};
+	const contactLength = 3 * (baseWidthM / 2 - eAbs);
+	const qPeak = contactLength > 1e-6 ? 2 * nDesign / contactLength : 0;
+	if (eSigned < 0) return {
+		qToe: qPeak,
+		qHeel: 0,
+		resultantWithinBase: true
+	};
+	return {
+		qToe: 0,
+		qHeel: qPeak,
+		resultantWithinBase: true
+	};
+}
+function pressureAt(x, baseWidthM, qToe, qHeel) {
+	const t = Math.min(1, Math.max(0, x / baseWidthM));
+	return qToe + (qHeel - qToe) * t;
+}
+/** Concise EC2 singly-reinforced rectangular section design, per metre width (b = 1000 mm). */
+function flexuralDesign$1(mEdKnmPerM, dMm, fckMpa, fydMpa) {
+	const b = 1e3;
+	const mEd = Math.abs(mEdKnmPerM) * 1e6;
+	if (mEd <= 0 || dMm <= 0) return {
+		asRequired: 0,
+		mRd: 0
+	};
+	const K = mEd / (b * dMm * dMm * fckMpa);
+	const Kuse = Math.min(K, .167);
+	const z = Math.min(.95 * dMm, dMm * (.5 + Math.sqrt(Math.max(0, .25 - Kuse / 1.134))));
+	const asRequired = mEd / (fydMpa * z);
+	return {
+		asRequired,
+		mRd: fydMpa * asRequired * z / 1e6
+	};
+}
+function vRdcOf$1(rho, dMm, fckMpa, gammaC) {
+	const k = Math.min(2, 1 + Math.sqrt(200 / dMm));
+	const rhoL = Math.min(.02, rho);
+	return Math.max(.18 / gammaC * k * Math.cbrt(100 * rhoL * fckMpa), .035 * Math.sqrt(k ** 3) * Math.sqrt(fckMpa));
+}
+function analyzeCantileverWall(project) {
+	const checks = [];
+	const push = (id, name, category, demand, demandUnit, resistance, resistanceUnit, utilization, status, clause) => checks.push({
+		id,
+		name,
+		category,
+		demand,
+		demandUnit,
+		resistance,
+		resistanceUnit,
+		utilization,
+		status,
+		clause
+	});
+	const p = {
+		fck: Math.max(10, pos$2(project.fck, 30)),
+		fyk: Math.max(400, pos$2(project.fyk, 500)),
+		gammaC: pos$2(project.gammaC, 1.5),
+		gammaS: pos$2(project.gammaS, 1.15),
+		alphaCC: Number.isFinite(project.alphaCC) ? project.alphaCC : .85,
+		cNomExposed: Math.max(10, pos$2(project.cNomExposed, 40)),
+		cNomBuried: Math.max(10, pos$2(project.cNomBuried, 50)),
+		wMax: nonNeg$2(project.wMax, .3),
+		stemHeight: pos$2(project.stemHeight, 3500),
+		stemTopThickness: pos$2(project.stemTopThickness, 250),
+		stemBaseThickness: pos$2(project.stemBaseThickness, 400),
+		stemBarDiameter: pos$2(project.stemBarDiameter, 20),
+		stemBarSpacing: pos$2(project.stemBarSpacing, 150),
+		toeLength: pos$2(project.toeLength, 900),
+		heelLength: pos$2(project.heelLength, 1800),
+		baseThickness: pos$2(project.baseThickness, 450),
+		embedmentDepth: pos$2(project.embedmentDepth, 1e3),
+		toeBarDiameter: pos$2(project.toeBarDiameter, 20),
+		toeBarSpacing: pos$2(project.toeBarSpacing, 150),
+		heelBarDiameter: pos$2(project.heelBarDiameter, 20),
+		heelBarSpacing: pos$2(project.heelBarSpacing, 150),
+		hasShearKey: !!project.hasShearKey,
+		keyWidth: pos$2(project.keyWidth, 300),
+		keyDepth: pos$2(project.keyDepth, 300),
+		keyDistanceFromToe: nonNeg$2(project.keyDistanceFromToe, 1500),
+		gammaBackfill: pos$2(project.gammaBackfill, 18),
+		phiBackfillDeg: pos$2(project.phiBackfillDeg, 32),
+		cBackfillKpa: nonNeg$2(project.cBackfillKpa, 0),
+		backfillSlopeDeg: nonNeg$2(project.backfillSlopeDeg, 0),
+		useCoulomb: !!project.useCoulomb,
+		deltaWallFrictionDeg: nonNeg$2(project.deltaWallFrictionDeg, 0),
+		surchargeKpa: nonNeg$2(project.surchargeKpa, 0),
+		psi2Surcharge: nonNeg$2(project.psi2Surcharge, .3),
+		gammaFoundation: pos$2(project.gammaFoundation, 19),
+		phiFoundationDeg: pos$2(project.phiFoundationDeg, 28),
+		cFoundationKpa: nonNeg$2(project.cFoundationKpa, 0),
+		baseFrictionAngleDeg: pos$2(project.baseFrictionAngleDeg, 25),
+		gammaPassive: pos$2(project.gammaPassive, 18),
+		phiPassiveDeg: pos$2(project.phiPassiveDeg, 30),
+		includePassiveResistance: !!project.includePassiveResistance,
+		passiveReductionFactor: nonNeg$2(project.passiveReductionFactor, .5),
+		waterTableDepthBehindWall: nonNeg$2(project.waterTableDepthBehindWall, 5e4),
+		waterTableDepthInFront: nonNeg$2(project.waterTableDepthInFront, 5e4)
+	};
+	const fcd = p.alphaCC * (p.fck / p.gammaC);
+	const fyd = p.fyk / p.gammaS;
+	const fctm$2 = fctm(p.fck);
+	const fctk005 = .7 * fctm$2;
+	const ecm = ecmFromFck(p.fck);
+	const Hmm = p.stemHeight + p.baseThickness;
+	const Hm = Hmm / 1e3;
+	const stemHeightM = p.stemHeight / 1e3;
+	const baseThicknessM = p.baseThickness / 1e3;
+	const toeLengthM = p.toeLength / 1e3;
+	const heelLengthM = p.heelLength / 1e3;
+	const Bmm = p.toeLength + p.stemBaseThickness + p.heelLength;
+	const Bm = Bmm / 1e3;
+	const stemAvgThickness = (p.stemTopThickness + p.stemBaseThickness) / 2;
+	const stemAvgThicknessM = stemAvgThickness / 1e3;
+	const embedmentM = p.embedmentDepth / 1e3;
+	const frontSoilCoverToeM = Math.max(0, embedmentM - baseThicknessM);
+	const dStem = Math.max(50, p.stemBaseThickness - p.cNomBuried - p.stemBarDiameter / 2);
+	const dToe = Math.max(50, p.baseThickness - p.cNomBuried - p.toeBarDiameter / 2);
+	const dHeel = Math.max(50, p.baseThickness - p.cNomBuried - p.heelBarDiameter / 2);
+	const wStemK = stemAvgThicknessM * stemHeightM * UNIT_WEIGHT_CONCRETE;
+	const xStem = toeLengthM + stemAvgThicknessM / 2;
+	const wBaseK = Bm * baseThicknessM * UNIT_WEIGHT_CONCRETE;
+	const xBase = Bm / 2;
+	const wKeyK = p.hasShearKey ? p.keyWidth / 1e3 * (p.keyDepth / 1e3) * UNIT_WEIGHT_CONCRETE : 0;
+	const xKey = p.keyDistanceFromToe / 1e3 + p.keyWidth / 1e3 / 2;
+	const waterBehindM = p.waterTableDepthBehindWall / 1e3;
+	const waterFrontM = p.waterTableDepthInFront / 1e3;
+	const wSoilHeelK = layeredSoilWeight(heelLengthM, stemHeightM, p.gammaBackfill, waterBehindM);
+	const xHeel = Bm - heelLengthM / 2;
+	const wSoilToeK = layeredSoilWeight(toeLengthM, frontSoilCoverToeM, p.gammaPassive, waterFrontM);
+	const xToe = toeLengthM / 2;
+	const qHeelK = p.surchargeKpa * heelLengthM;
+	const upliftForceK = GAMMA_W$1 * ((Math.max(0, Hm - waterBehindM) + Math.max(0, embedmentM - waterFrontM)) / 2) * Bm;
+	function runCombo(f) {
+		const phiBackfillD = designPhi$1(p.phiBackfillDeg, f.gammaPhi);
+		const phiFoundationD = designPhi$1(p.phiFoundationDeg, f.gammaPhi);
+		const phiPassiveD = designPhi$1(p.phiPassiveDeg, f.gammaPhi);
+		const deltaD = designPhi$1(p.deltaWallFrictionDeg, f.gammaPhi);
+		const baseFrictionD = designPhi$1(p.baseFrictionAngleDeg, f.gammaPhi);
+		const kA = p.useCoulomb ? kaCoulomb(phiBackfillD, 0, p.backfillSlopeDeg, deltaD) : kaRankine(phiBackfillD);
+		const kP = p.useCoulomb ? kpCoulomb(phiPassiveD, 0, 0, 0) : kpRankine(phiPassiveD);
+		const overall = earthActions(Hm, kA, p.gammaBackfill, waterBehindM, p.surchargeKpa);
+		const hDesign = f.gammaGUnfav * (overall.earthForce + overall.waterForce) + f.gammaQ * overall.surchargeForce;
+		const mOverturning = f.gammaGUnfav * (overall.earthMoment + overall.waterMoment) + f.gammaQ * overall.surchargeMoment;
+		const nDesign = f.gammaGFav * (wStemK + wBaseK + wKeyK + wSoilHeelK + wSoilToeK) + f.gammaQ * qHeelK - f.gammaGUnfav * upliftForceK;
+		const mStabilizing = f.gammaGFav * (wStemK * xStem + wBaseK * xBase + wKeyK * xKey + wSoilHeelK * xHeel + wSoilToeK * xToe) + f.gammaQ * qHeelK * xHeel - f.gammaGUnfav * upliftForceK * (Bm / 2);
+		const resultantWithinBase = nDesign > 0 && mStabilizing - mOverturning >= 0 && mStabilizing - mOverturning <= nDesign * Bm;
+		const xR = nDesign > 0 ? (mStabilizing - mOverturning) / nDesign : Bm / 2;
+		const eSigned = Bm / 2 - xR;
+		const eccentricity = Math.abs(eSigned);
+		const resultantWithinMiddleThird = eccentricity <= Bm / 6;
+		const { qToe, qHeel } = basePressure(Math.max(0, nDesign), Bm, -eSigned);
+		const effectiveWidth = Math.max(0, Bm - 2 * eccentricity);
+		let passiveForceD = 0;
+		if (p.includePassiveResistance) {
+			const dry = Math.min(embedmentM, waterFrontM);
+			const sub = Math.max(0, embedmentM - dry);
+			const gEff = p.gammaPassive;
+			const earthPp = kP * (.5 * gEff * dry * dry + gEff * dry * sub + .5 * Math.max(0, gEff - GAMMA_W$1) * sub * sub);
+			passiveForceD = p.passiveReductionFactor * earthPp;
+		}
+		const slidingDemand = hDesign;
+		const slidingResistance = Math.max(0, nDesign) * Math.tan(toRad(baseFrictionD)) / f.gammaRh + passiveForceD;
+		const Bp = Math.max(.05, effectiveWidth);
+		const cD = p.cFoundationKpa / f.gammaC;
+		const phiFRad = toRad(phiFoundationD);
+		const Nq = Math.exp(Math.PI * Math.tan(phiFRad)) * Math.tan(Math.PI / 4 + phiFRad / 2) ** 2;
+		const Nc = phiFoundationD > .05 ? (Nq - 1) / Math.tan(phiFRad) : 5.14;
+		const Ngamma = 2 * (Nq - 1) * Math.tan(phiFRad);
+		const dryF = Math.min(embedmentM, waterFrontM);
+		const subF = Math.max(0, embedmentM - dryF);
+		const qOverburden = p.gammaFoundation * dryF + Math.max(0, p.gammaFoundation - GAMMA_W$1) * subF;
+		const acTerm = cD > 0 && phiFoundationD > .05 ? Bp * cD / Math.tan(phiFRad) : 0;
+		const m = 2;
+		const base = Math.min(1, Math.max(0, 1 - hDesign / Math.max(1e-6, nDesign + acTerm)));
+		const iq = base ** m;
+		const iGamma = base ** 3;
+		const iC = phiFoundationD > .05 ? iq - (1 - iq) / (Nc * Math.tan(phiFRad)) : iq;
+		const bearingResistance = (cD * Nc * iC + qOverburden * Nq * iq + .5 * p.gammaFoundation * Bp * Ngamma * iGamma) / f.gammaRv;
+		const bearingDemand = Math.max(0, nDesign) / Bp;
+		const stemAct = earthActions(stemHeightM, kA, p.gammaBackfill, waterBehindM, p.surchargeKpa);
+		const stemVEd = f.gammaGUnfav * (stemAct.earthForce + stemAct.waterForce) + f.gammaQ * stemAct.surchargeForce;
+		const stemMEd = f.gammaGUnfav * (stemAct.earthMoment + stemAct.waterMoment) + f.gammaQ * stemAct.surchargeMoment;
+		const qToeTip = qToe;
+		const qAtStemFace = pressureAt(toeLengthM, Bm, qToe, qHeel);
+		const toeSelfWeightUdl = UNIT_WEIGHT_CONCRETE * baseThicknessM;
+		const toeSoilUdl = toeLengthM > 0 ? wSoilToeK / toeLengthM : 0;
+		const toeLoad = trapLoad(qToeTip - toeSelfWeightUdl - toeSoilUdl, qAtStemFace - toeSelfWeightUdl - toeSoilUdl, toeLengthM);
+		const toeMEd = toeLoad.resultant * (toeLengthM - toeLoad.centroidFromFreeEnd);
+		const toeVEd = toeLoad.resultant;
+		const heelDownUdl = UNIT_WEIGHT_CONCRETE * baseThicknessM + (heelLengthM > 0 ? wSoilHeelK / heelLengthM : 0) + p.surchargeKpa;
+		const qHeelTip = qHeel;
+		const qAtStemBack = pressureAt(toeLengthM + p.stemBaseThickness / 1e3, Bm, qToe, qHeel);
+		const heelLoad = trapLoad(heelDownUdl - qHeelTip, heelDownUdl - qAtStemBack, heelLengthM);
+		const heelMEd = heelLoad.resultant * (heelLengthM - heelLoad.centroidFromFreeEnd);
+		const heelVEd = heelLoad.resultant;
+		return {
+			label: f.label,
+			kA: round$2(kA, 4),
+			kP: round$2(kP, 4),
+			phiBackfillD: round$2(phiBackfillD, 2),
+			phiFoundationD: round$2(phiFoundationD, 2),
+			phiPassiveD: round$2(phiPassiveD, 2),
+			hDesign: round$2(hDesign),
+			nDesign: round$2(nDesign),
+			mOverturning: round$2(mOverturning),
+			mStabilizing: round$2(mStabilizing),
+			eccentricity: round$2(eccentricity, 3),
+			resultantWithinMiddleThird,
+			resultantWithinBase,
+			toePressure: round$2(qToe),
+			heelPressure: round$2(qHeel),
+			effectiveWidth: round$2(effectiveWidth, 3),
+			slidingDemand: round$2(slidingDemand),
+			slidingResistance: round$2(slidingResistance),
+			bearingDemand: round$2(bearingDemand),
+			bearingResistance: round$2(bearingResistance),
+			stemMEd: round$2(stemMEd),
+			stemVEd: round$2(stemVEd),
+			toeMEd: round$2(toeMEd),
+			toeVEd: round$2(toeVEd),
+			heelMEd: round$2(heelMEd),
+			heelVEd: round$2(heelVEd)
+		};
+	}
+	const c1 = runCombo(DA1_C1$1);
+	const c2 = runCombo(DA1_C2$1);
+	push("ST-01", "Sliding resistance (DA1-C1)", "Stability", c1.slidingDemand, "kN/m", c1.slidingResistance, "kN/m", safeRatio$2(c1.slidingDemand, c1.slidingResistance), passFail$2(c1.slidingDemand, c1.slidingResistance), "EN 1997-1 §6.5.3");
+	push("ST-02", "Sliding resistance (DA1-C2)", "Stability", c2.slidingDemand, "kN/m", c2.slidingResistance, "kN/m", safeRatio$2(c2.slidingDemand, c2.slidingResistance), passFail$2(c2.slidingDemand, c2.slidingResistance), "EN 1997-1 §6.5.3");
+	push("ST-03", "Bearing resistance (DA1-C1)", "Stability", c1.bearingDemand, "kPa", c1.bearingResistance, "kPa", safeRatio$2(c1.bearingDemand, c1.bearingResistance), passFail$2(c1.bearingDemand, c1.bearingResistance), "EN 1997-1 Annex D");
+	push("ST-04", "Bearing resistance (DA1-C2)", "Stability", c2.bearingDemand, "kPa", c2.bearingResistance, "kPa", safeRatio$2(c2.bearingDemand, c2.bearingResistance), passFail$2(c2.bearingDemand, c2.bearingResistance), "EN 1997-1 Annex D");
+	const eccGov = c1.eccentricity >= c2.eccentricity ? c1 : c2;
+	const eccStatus = !eccGov.resultantWithinBase ? "FAIL" : eccGov.eccentricity > Bm / 3 ? "FAIL" : eccGov.eccentricity > Bm / 6 ? "WARNING" : "PASS";
+	push("ST-05", `Eccentricity e ≤ B/6 (${eccGov.label})`, "Stability", eccGov.eccentricity, "m", Bm / 6, "m", safeRatio$2(eccGov.eccentricity, Bm / 6), eccStatus, "EN 1997-1 §9.8.1 note (Meyerhof)");
+	const otRatioC1 = c1.mOverturning > 0 ? c1.mStabilizing / c1.mOverturning : 999;
+	const otRatioC2 = c2.mOverturning > 0 ? c2.mStabilizing / c2.mOverturning : 999;
+	const otGov = otRatioC1 <= otRatioC2 ? {
+		r: otRatioC1,
+		label: c1.label
+	} : {
+		r: otRatioC2,
+		label: c2.label
+	};
+	push("ST-06", `Overturning moment ratio (${otGov.label}, cross-check)`, "Stability", 1, "-", otGov.r, "-", safeRatio$2(1, otGov.r), passFail$2(1, otGov.r), "EN 1997-1 §9.8.1 note");
+	const stemMEdGov = Math.max(Math.abs(c1.stemMEd), Math.abs(c2.stemMEd));
+	const stemVEdGov = Math.max(Math.abs(c1.stemVEd), Math.abs(c2.stemVEd));
+	const toeMEdGov = Math.max(Math.abs(c1.toeMEd), Math.abs(c2.toeMEd));
+	const toeVEdGov = Math.max(Math.abs(c1.toeVEd), Math.abs(c2.toeVEd));
+	const heelMEdGov = Math.max(Math.abs(c1.heelMEd), Math.abs(c2.heelMEd));
+	const heelVEdGov = Math.max(Math.abs(c1.heelVEd), Math.abs(c2.heelVEd));
+	const stemFlex = flexuralDesign$1(stemMEdGov, dStem, p.fck, fyd);
+	const stemAsProvided = barArea$1(p.stemBarDiameter) * (1e3 / p.stemBarSpacing);
+	const stemAsMin = Math.max(.26 * (fctm$2 / p.fyk) * 1e3 * dStem, 1.3 * dStem);
+	const stemVRdc = vRdcOf$1(stemAsProvided / (1e3 * dStem), dStem, p.fck, p.gammaC) * 1e3 * dStem / 1e3;
+	const toeFlex = flexuralDesign$1(toeMEdGov, dToe, p.fck, fyd);
+	const toeAsProvided = barArea$1(p.toeBarDiameter) * (1e3 / p.toeBarSpacing);
+	const toeAsMin = Math.max(.26 * (fctm$2 / p.fyk) * 1e3 * dToe, 1.3 * dToe);
+	const toeVRdc = vRdcOf$1(toeAsProvided / (1e3 * dToe), dToe, p.fck, p.gammaC) * 1e3 * dToe / 1e3;
+	const heelFlex = flexuralDesign$1(heelMEdGov, dHeel, p.fck, fyd);
+	const heelAsProvided = barArea$1(p.heelBarDiameter) * (1e3 / p.heelBarSpacing);
+	const heelAsMin = Math.max(.26 * (fctm$2 / p.fyk) * 1e3 * dHeel, 1.3 * dHeel);
+	const heelVRdc = vRdcOf$1(heelAsProvided / (1e3 * dHeel), dHeel, p.fck, p.gammaC) * 1e3 * dHeel / 1e3;
+	push("UL-07", "Stem flexure at footing top", "ULS", stemFlex.asRequired, "mm²/m", stemAsProvided, "mm²/m", safeRatio$2(stemFlex.asRequired, stemAsProvided), passFail$2(stemFlex.asRequired, stemAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-08", "Stem shear at footing top", "ULS", stemVEdGov, "kN/m", stemVRdc, "kN/m", safeRatio$2(stemVEdGov, stemVRdc), passFail$2(stemVEdGov, stemVRdc), "EN 1992-1-1 §6.2.2");
+	push("UL-09", "Toe flexure at stem face", "ULS", toeFlex.asRequired, "mm²/m", toeAsProvided, "mm²/m", safeRatio$2(toeFlex.asRequired, toeAsProvided), passFail$2(toeFlex.asRequired, toeAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-10", "Toe shear at stem face", "ULS", toeVEdGov, "kN/m", toeVRdc, "kN/m", safeRatio$2(toeVEdGov, toeVRdc), passFail$2(toeVEdGov, toeVRdc), "EN 1992-1-1 §6.2.2");
+	push("UL-11", "Heel flexure at stem face", "ULS", heelFlex.asRequired, "mm²/m", heelAsProvided, "mm²/m", safeRatio$2(heelFlex.asRequired, heelAsProvided), passFail$2(heelFlex.asRequired, heelAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-12", "Heel shear at stem face", "ULS", heelVEdGov, "kN/m", heelVRdc, "kN/m", safeRatio$2(heelVEdGov, heelVRdc), passFail$2(heelVEdGov, heelVRdc), "EN 1992-1-1 §6.2.2");
+	let keyMEd = 0;
+	let keyVEd = 0;
+	let keyAsRequired = 0;
+	if (p.hasShearKey) {
+		const keyDepthM = p.keyDepth / 1e3;
+		const dryK = Math.min(embedmentM + keyDepthM, waterFrontM);
+		const subK = Math.max(0, embedmentM + keyDepthM - dryK);
+		const kPUse = c2.kP;
+		const netPressureAtKeyTip = kPUse * (p.gammaPassive * dryK + Math.max(0, p.gammaPassive - GAMMA_W$1) * subK);
+		const keyLoad = trapLoad(kPUse * (p.gammaPassive * Math.min(embedmentM, waterFrontM)), netPressureAtKeyTip, keyDepthM);
+		keyMEd = keyLoad.resultant * (keyDepthM - keyLoad.centroidFromFreeEnd);
+		keyVEd = keyLoad.resultant;
+		const dKey = Math.max(50, p.keyWidth - p.cNomBuried * 2);
+		keyAsRequired = flexuralDesign$1(keyMEd, dKey, p.fck, fyd).asRequired;
+		push("UL-13", "Shear key flexure (simplified nib model)", "ULS", keyAsRequired, "mm²/m", stemAsProvided, "mm²/m", safeRatio$2(keyAsRequired, stemAsProvided), passFail$2(keyAsRequired, stemAsProvided), "EN 1992-1-1 §6.1 (simplified)");
+	} else push("UL-13", "Shear key flexure", "ULS", 0, "-", 0, "-", 0, "NOT VERIFIED", "No shear key modelled");
+	push("UL-14", "Minimum reinforcement — stem", "ULS", stemAsMin, "mm²/m", stemAsProvided, "mm²/m", safeRatio$2(stemAsMin, stemAsProvided), passFail$2(stemAsMin, stemAsProvided), "EN 1992-1-1 §9.2.1.1");
+	push("UL-15", "Minimum reinforcement — toe", "ULS", toeAsMin, "mm²/m", toeAsProvided, "mm²/m", safeRatio$2(toeAsMin, toeAsProvided), passFail$2(toeAsMin, toeAsProvided), "EN 1992-1-1 §9.2.1.1");
+	push("UL-16", "Minimum reinforcement — heel", "ULS", heelAsMin, "mm²/m", heelAsProvided, "mm²/m", safeRatio$2(heelAsMin, heelAsProvided), passFail$2(heelAsMin, heelAsProvided), "EN 1992-1-1 §9.2.1.1");
+	const fbd = 2.25 * (fctk005 / p.gammaC);
+	const stemAnchorageRequired = p.stemBarDiameter / 4 * (fyd / fbd);
+	const stemAnchorageAvailable = Math.max(0, p.baseThickness - 2 * p.cNomBuried);
+	push("DT-17", "Stem bar anchorage into footing", "Durability", stemAnchorageRequired, "mm", stemAnchorageAvailable, "mm", safeRatio$2(stemAnchorageRequired, stemAnchorageAvailable), passFail$2(stemAnchorageRequired, stemAnchorageAvailable), "EN 1992-1-1 §8.4 (simplified straight length)");
+	push("DT-18", "Construction-joint shear-friction / dowel check", "Durability", 0, "-", 0, "-", 0, "NOT VERIFIED", "Out of scope — verify separately per EN 1992-1-1 §6.2.5");
+	push("DT-19", "Global (slope) stability", "Durability", 0, "-", 0, "-", 0, "NOT VERIFIED", "Requires specialist slope-stability software");
+	push("DT-20", "Settlement", "Durability", 0, "-", 0, "-", 0, "NOT VERIFIED", "Requires project geotechnical report");
+	const qpAct = earthActions(stemHeightM, kaRankine(p.phiBackfillDeg), p.gammaBackfill, waterBehindM, p.surchargeKpa * p.psi2Surcharge);
+	const mQpStem = qpAct.earthMoment + qpAct.waterMoment + qpAct.surchargeMoment;
+	const sigmaSqp = mQpStem > 0 ? mQpStem * 1e6 / (stemAsProvided * .9 * dStem) / 1e3 : 0;
+	const hMinusD = Math.max(10, p.stemBaseThickness - dStem);
+	const acEff = 1e3 * Math.min(2.5 * hMinusD, p.stemBaseThickness / 2);
+	const rhoPeff = Math.max(1e-4, stemAsProvided / acEff);
+	const alphaE = ES$1 / ecm;
+	const crackWidthStem = (3.4 * p.cNomBuried + .17 * p.stemBarDiameter / rhoPeff) * Math.max((sigmaSqp - .4 * (fctm$2 / rhoPeff) * (1 + alphaE * rhoPeff)) / ES$1, .6 * sigmaSqp / ES$1);
+	push("SL-21", "Crack width — stem (quasi-permanent)", "SLS", crackWidthStem, "mm", p.wMax, "mm", safeRatio$2(crackWidthStem, p.wMax), passFail$2(crackWidthStem, p.wMax), "EN 1992-1-1 §7.3.4");
+	push("SL-22", "Crack width — heel/toe (quasi-permanent)", "SLS", 0, "-", 0, "-", 0, "NOT VERIFIED", "Not automated in this version — check separately if governing");
+	const listing = [...checks].sort((a, b) => b.utilization - a.utilization);
+	const utilizationMax = listing.reduce((a, b) => Math.max(a, b.utilization), 0);
+	const failed = listing.find((c) => c.status === "FAIL");
+	let overallStatus = "PASS";
+	if (failed) overallStatus = "FAIL";
+	else if (listing.some((c) => c.status === "WARNING") || utilizationMax > .9) overallStatus = "WARNING";
+	return {
+		fcd: round$2(fcd),
+		fyd: round$2(fyd, 1),
+		fctm: round$2(fctm$2, 2),
+		fctk005: round$2(fctk005, 2),
+		ecm: Math.round(ecm),
+		totalHeight: Math.round(Hmm),
+		baseWidth: Math.round(Bmm),
+		stemAvgThickness: Math.round(stemAvgThickness),
+		dStem: Math.round(dStem),
+		dToe: Math.round(dToe),
+		dHeel: Math.round(dHeel),
+		combos: {
+			c1,
+			c2
+		},
+		stemMEdGov: round$2(stemMEdGov),
+		stemVEdGov: round$2(stemVEdGov),
+		toeMEdGov: round$2(toeMEdGov),
+		toeVEdGov: round$2(toeVEdGov),
+		heelMEdGov: round$2(heelMEdGov),
+		heelVEdGov: round$2(heelVEdGov),
+		stemAsRequired: Math.round(stemFlex.asRequired),
+		stemAsProvided: Math.round(stemAsProvided),
+		stemAsMin: Math.round(stemAsMin),
+		stemVRdc: round$2(stemVRdc),
+		toeAsRequired: Math.round(toeFlex.asRequired),
+		toeAsProvided: Math.round(toeAsProvided),
+		toeAsMin: Math.round(toeAsMin),
+		toeVRdc: round$2(toeVRdc),
+		heelAsRequired: Math.round(heelFlex.asRequired),
+		heelAsProvided: Math.round(heelAsProvided),
+		heelAsMin: Math.round(heelAsMin),
+		heelVRdc: round$2(heelVRdc),
+		keyMEd: round$2(keyMEd),
+		keyVEd: round$2(keyVEd),
+		keyAsRequired: Math.round(keyAsRequired),
+		stemAnchorageRequired: Math.round(stemAnchorageRequired),
+		stemAnchorageAvailable: Math.round(stemAnchorageAvailable),
+		sigmaSqp: round$2(sigmaSqp),
+		crackWidthStem: round$2(crackWidthStem, 3),
+		crackLimit: p.wMax,
+		checks: listing,
+		utilizationMax: round$2(utilizationMax, 2),
+		governingName: listing[0]?.name ?? "—",
+		overallStatus
+	};
+}
+var defaultCantileverWallProject = () => ({
+	projectName: "Demonstration Highway Retaining Wall",
+	projectNumber: "RW-2026-CANT",
+	client: "Infrastructure Client Ltd",
+	designer: "Lead Structural Engineer",
+	concreteGrade: "C30/37",
+	steelGrade: "B500C",
+	fck: 30,
+	fyk: 500,
+	gammaC: 1.5,
+	gammaS: 1.15,
+	alphaCC: .85,
+	exposureClassExposed: "XC4",
+	exposureClassBuried: "XC2",
+	designLife: 50,
+	cNomExposed: 40,
+	cNomBuried: 50,
+	wMax: .3,
+	stemHeight: 3500,
+	stemTopThickness: 250,
+	stemBaseThickness: 400,
+	stemBarDiameter: 20,
+	stemBarSpacing: 150,
+	toeLength: 900,
+	heelLength: 1800,
+	baseThickness: 450,
+	embedmentDepth: 1e3,
+	toeBarDiameter: 20,
+	toeBarSpacing: 150,
+	heelBarDiameter: 20,
+	heelBarSpacing: 150,
+	hasShearKey: false,
+	keyWidth: 300,
+	keyDepth: 300,
+	keyDistanceFromToe: 1500,
+	gammaBackfill: 18,
+	phiBackfillDeg: 32,
+	cBackfillKpa: 0,
+	backfillSlopeDeg: 0,
+	useCoulomb: false,
+	deltaWallFrictionDeg: 0,
+	surchargeKpa: 10,
+	psi2Surcharge: .3,
+	gammaFoundation: 19,
+	phiFoundationDeg: 28,
+	cFoundationKpa: 0,
+	baseFrictionAngleDeg: 25,
+	gammaPassive: 18,
+	phiPassiveDeg: 30,
+	includePassiveResistance: false,
+	passiveReductionFactor: .5,
+	waterTableDepthBehindWall: 5e4,
+	waterTableDepthInFront: 5e4
+});
+function StatusBadge$2({ status }) {
+	const cls = status === "PASS" ? "bg-emerald-950 border-emerald-600 text-emerald-400" : status === "WARNING" ? "bg-amber-950 border-amber-600 text-amber-300" : status === "FAIL" ? "bg-rose-950 border-rose-600 text-rose-400" : "bg-slate-800 border-slate-600 text-slate-300";
+	const icon = status === "PASS" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "size-3" }) : status === "WARNING" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+		className: `inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-mono ${cls}`,
+		children: [icon, status]
+	});
+}
+function StatCard$2({ label, value, unit, sub, tone = "cyan" }) {
+	const color = {
+		cyan: "text-cyan-300",
+		white: "text-white",
+		emerald: "text-emerald-400",
+		amber: "text-amber-400",
+		rose: "text-rose-400"
+	}[tone];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/90 border border-cyan-500/30 rounded-xl p-4",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400",
+				children: label
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: `text-2xl font-mono font-bold mt-1 ${color}`,
+				children: [
+					value,
+					" ",
+					unit && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-xs text-cyan-400",
+						children: unit
+					})
+				]
+			}),
+			sub && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-[11px] font-mono text-slate-500 mt-1",
+				children: sub
+			})
+		]
+	});
+}
+function NumField$2({ label, value, unit, onChange, min, max, step = 1 }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: [label, unit && ` (${unit})`]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+			type: "number",
+			value: Number.isFinite(value) ? value : 0,
+			min,
+			max,
+			step,
+			onChange: (e) => onChange(Number(e.target.value)),
+			className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
+		})]
+	});
+}
+function CheckField$1({ label, checked, onChange }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "flex items-center gap-2 text-xs text-slate-300 font-mono",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+			type: "checkbox",
+			checked,
+			onChange: (e) => onChange(e.target.checked),
+			className: "size-4 accent-cyan-500"
+		}), label]
+	});
+}
+function Field$2({ label, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: label
+		}), children]
+	});
+}
+function Section$2({ title, hint, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex items-center justify-between border-b border-cyan-900/60 pb-4 mb-6 gap-3 flex-wrap",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "font-display text-xl font-bold text-white",
+				children: title
+			}), hint && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400 mt-1",
+				children: hint
+			})] })
+		}), children]
+	});
+}
+function ChecksTable$2({ checks }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "overflow-x-auto",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+			className: "w-full text-left font-mono text-xs",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+				className: "border-b border-slate-700 text-cyan-400 bg-cyan-950/30",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Check"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Demand"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Resistance"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "UR"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Status"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Clause"
+					})
+				]
+			}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", {
+				className: "divide-y divide-slate-800",
+				children: checks.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+					className: "hover:bg-slate-900/50",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "rounded bg-cyan-950 px-1.5 py-0.5 text-[10px] text-cyan-300",
+									children: c.id
+								}),
+								" ",
+								c.name
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.demand.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.demandUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.resistance.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.resistanceUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: `p-3 text-right font-bold ${c.utilization > 1 ? "text-rose-400" : c.utilization > .9 ? "text-amber-400" : "text-emerald-400"}`,
+							children: c.utilization.toFixed(2)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge$2, { status: c.status })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3 text-slate-500",
+							children: c.clause
+						})
+					]
+				}, c.id))
+			})]
+		})
+	});
+}
+function Eq$2({ children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "rounded-lg bg-[#03070e] border border-cyan-900/60 p-3 font-mono text-xs text-cyan-100 overflow-x-auto",
+		children
+	});
+}
+var MONO$2 = "JetBrains Mono, monospace";
+function RetainingWallSection({ project, result }) {
+	const W = 780;
+	const H = 460;
+	const padX = 70;
+	const padTop = 40;
+	const Bmm = result.baseWidth;
+	const Hmm = result.totalHeight;
+	const scale = Math.min(640 / Bmm, 360 / Hmm);
+	const baseY = padTop + Hmm * scale;
+	const footingTopY = baseY - project.baseThickness * scale;
+	const stemTopY = footingTopY - project.stemHeight * scale;
+	const toeX0 = padX;
+	const toeX1 = toeX0 + project.toeLength * scale;
+	const stemX0 = toeX1;
+	const stemX1 = stemX0 + project.stemBaseThickness * scale;
+	const stemTopX0 = stemX0;
+	const stemTopX1 = stemX0 + project.stemTopThickness * scale;
+	const heelX0 = stemX1;
+	const heelX1 = heelX0 + project.heelLength * scale;
+	const frontGradeY = baseY - project.embedmentDepth * scale;
+	const c1 = result.combos.c1;
+	const eSign = c1.heelPressure >= c1.toePressure ? 1 : -1;
+	const pressureScale = 24 / Math.max(1, Math.max(c1.toePressure, c1.heelPressure));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+		viewBox: `0 0 ${W} ${H}`,
+		className: "w-full h-auto max-w-full",
+		role: "img",
+		"aria-label": "Cantilever retaining wall cross-section",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("defs", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pattern", {
+				id: "rwSoilRetained",
+				width: "8",
+				height: "8",
+				patternUnits: "userSpaceOnUse",
+				patternTransform: "rotate(45)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+					x1: "0",
+					y1: "0",
+					x2: "0",
+					y2: "8",
+					stroke: "#7d6650",
+					strokeWidth: "1.2",
+					strokeOpacity: "0.55"
+				})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pattern", {
+				id: "rwSoilFront",
+				width: "8",
+				height: "8",
+				patternUnits: "userSpaceOnUse",
+				patternTransform: "rotate(-45)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+					x1: "0",
+					y1: "0",
+					x2: "0",
+					y2: "8",
+					stroke: "#5b7d6c",
+					strokeWidth: "1.2",
+					strokeOpacity: "0.55"
+				})
+			})] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: heelX0,
+				y: stemTopY,
+				width: 710 - heelX0,
+				height: baseY - stemTopY,
+				fill: "url(#rwSoilRetained)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: heelX0,
+				y1: stemTopY,
+				x2: 720,
+				y2: stemTopY,
+				stroke: "#a3866a",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: 50,
+				y: frontGradeY,
+				width: 20,
+				height: baseY - frontGradeY,
+				fill: "url(#rwSoilFront)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: 50,
+				y1: frontGradeY,
+				x2: toeX0,
+				y2: frontGradeY,
+				stroke: "#7fa08c",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: toeX0,
+				y: frontGradeY,
+				width: toeX1 - toeX0,
+				height: Math.max(0, footingTopY - frontGradeY),
+				fill: "url(#rwSoilFront)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: toeX0,
+				y: footingTopY,
+				width: heelX1 - toeX0,
+				height: baseY - footingTopY,
+				fill: "rgba(6,182,212,0.12)",
+				stroke: "#38bdf8",
+				strokeWidth: "2"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+				points: `${stemX0},${footingTopY} ${stemX1},${footingTopY} ${stemTopX1},${stemTopY} ${stemTopX0},${stemTopY}`,
+				fill: "rgba(6,182,212,0.12)",
+				stroke: "#38bdf8",
+				strokeWidth: "2"
+			}),
+			project.hasShearKey && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: toeX0 + project.keyDistanceFromToe * scale,
+				y: baseY,
+				width: project.keyWidth * scale,
+				height: project.keyDepth * scale,
+				fill: "rgba(6,182,212,0.12)",
+				stroke: "#38bdf8",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+				points: `${heelX1},${stemTopY} ${heelX1 + 26},${baseY} ${heelX1},${baseY}`,
+				fill: "rgba(245,158,11,0.18)",
+				stroke: "#f59e0b",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: heelX1 + 30,
+				y: (stemTopY + baseY) / 2,
+				fill: "#f59e0b",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: "Pa,active"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+				points: `${toeX0},${baseY} ${toeX0},${baseY + Math.max(2, c1.toePressure * pressureScale)} ${heelX1},${baseY + Math.max(2, c1.heelPressure * pressureScale)} ${heelX1},${baseY}`,
+				fill: "rgba(34,211,238,0.18)",
+				stroke: "#22d3ee",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: toeX0,
+				y: baseY + Math.max(2, c1.toePressure * pressureScale) + 12,
+				fill: "#22d3ee",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"q_toe ",
+					c1.toePressure.toFixed(0),
+					" kPa"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: heelX1 - 90,
+				y: baseY + Math.max(2, c1.heelPressure * pressureScale) + 12,
+				fill: "#22d3ee",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"q_heel ",
+					c1.heelPressure.toFixed(0),
+					" kPa"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("g", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: toeX0 + (result.baseWidth / 2e3 + eSign * c1.eccentricity) * scale * 1e3,
+				y1: baseY - 14,
+				x2: toeX0 + (result.baseWidth / 2e3 + eSign * c1.eccentricity) * scale * 1e3,
+				y2: baseY + 6,
+				stroke: "#fef08a",
+				strokeWidth: "2"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: toeX0 + (result.baseWidth / 2e3 + eSign * c1.eccentricity) * scale * 1e3,
+				y: baseY - 18,
+				textAnchor: "middle",
+				fill: "#fef08a",
+				fontSize: "9",
+				fontFamily: MONO$2,
+				children: [
+					"R (e=",
+					c1.eccentricity.toFixed(2),
+					"m)"
+				]
+			})] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: toeX0,
+				y: footingTopY - 8,
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"Toe ",
+					project.toeLength,
+					" mm"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: heelX0 + 6,
+				y: footingTopY - 8,
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"Heel ",
+					project.heelLength,
+					" mm"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: stemTopX0 - 4,
+				y: stemTopY - 8,
+				fill: "#cbd5e1",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"H = ",
+					(result.totalHeight / 1e3).toFixed(2),
+					" m"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: 15,
+				y: baseY + 4,
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: "F.G."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: heelX1 + 5,
+				y: stemTopY - 8,
+				fill: "#a3866a",
+				fontSize: "10",
+				fontFamily: MONO$2,
+				children: [
+					"Backfill γ=",
+					project.gammaBackfill,
+					" φ'=",
+					project.phiBackfillDeg,
+					"°"
+				]
+			})
+		]
+	});
+}
+function OverviewTab$2({ body, setActiveTab }) {
+	const { project, res } = body;
+	const governing = res.checks[0];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Cross-Section & Governing State",
+				hint: "DA1-C1 pressures shown; both DA1-C1/C2 are checked for every stability item",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-6 lg:grid-cols-[2fr_1fr]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "bg-[#03070e] border border-slate-800 rounded-xl p-3",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RetainingWallSection, {
+							project,
+							result: res
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+								label: "Overall status",
+								value: res.overallStatus,
+								sub: `UR_max = ${res.utilizationMax}`,
+								tone: res.overallStatus === "FAIL" ? "rose" : res.overallStatus === "WARNING" ? "amber" : "emerald"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+								label: "Governing check",
+								value: governing?.id ?? "—",
+								sub: governing?.name ?? "—",
+								tone: "white"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+								label: "Wall height H",
+								value: (res.totalHeight / 1e3).toFixed(2),
+								unit: "m",
+								sub: `Base width B = ${(res.baseWidth / 1e3).toFixed(2)} m`
+							})
+						]
+					})]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+						label: "Sliding (worse combo)",
+						value: `${Math.max(res.combos.c1.slidingDemand / Math.max(1, res.combos.c1.slidingResistance), res.combos.c2.slidingDemand / Math.max(1, res.combos.c2.slidingResistance)).toFixed(2)}`,
+						sub: "UR, sliding"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+						label: "Bearing (worse combo)",
+						value: `${Math.max(res.combos.c1.bearingDemand / Math.max(1, res.combos.c1.bearingResistance), res.combos.c2.bearingDemand / Math.max(1, res.combos.c2.bearingResistance)).toFixed(2)}`,
+						sub: "UR, bearing"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+						label: "Eccentricity",
+						value: `${Math.max(res.combos.c1.eccentricity, res.combos.c2.eccentricity).toFixed(3)}`,
+						unit: "m",
+						sub: `limit B/6 = ${(res.baseWidth / 6e3).toFixed(3)} m`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+						label: "Stem reinforcement",
+						value: `${res.stemAsProvided}`,
+						unit: "mm²/m",
+						sub: `req. ${res.stemAsRequired} mm²/m`
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Design Check Matrix",
+				hint: "All ULS / SLS / stability / durability checks, most critical first",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$2, { checks: res.checks }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 flex flex-wrap gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab("stability"),
+						className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+						children: ["Stability detail ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab("report"),
+						className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+						children: ["Calculation report ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-center gap-2 text-xs font-mono text-slate-500",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge$2, { status: res.overallStatus }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "This AI-generated calculation is an engineering support document and does not replace independent checking and approval." })]
+			})
+		]
+	});
+}
+var CONCRETE_GRADES$1 = [
+	["C25/30", 25],
+	["C30/37", 30],
+	["C35/45", 35],
+	["C40/50", 40]
+];
+var EXPOSURE$1 = [
+	["XC1", .4],
+	["XC2", .3],
+	["XC3", .3],
+	["XC4", .3],
+	["XD1", .3]
+];
+function GeometryTab$1({ body }) {
+	const { project, res, pad } = body;
+	const setGrade = (fck) => {
+		const grade = CONCRETE_GRADES$1.find(([, f]) => f === fck);
+		pad({
+			fck,
+			concreteGrade: grade ? grade[0] : project.concreteGrade
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Stem Geometry",
+				hint: "Back face vertical (virtual-back plane); front face may batter via top/base thickness",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Stem height",
+							value: project.stemHeight,
+							unit: "mm",
+							onChange: (v) => pad({ stemHeight: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Top thickness",
+							value: project.stemTopThickness,
+							unit: "mm",
+							onChange: (v) => pad({ stemTopThickness: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Base thickness",
+							value: project.stemBaseThickness,
+							unit: "mm",
+							onChange: (v) => pad({ stemBaseThickness: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Effective depth d",
+							value: `${res.dStem}`,
+							unit: "mm",
+							sub: "back-face bars"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Main bar diameter",
+							value: project.stemBarDiameter,
+							unit: "mm",
+							onChange: (v) => pad({ stemBarDiameter: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Bar spacing",
+							value: project.stemBarSpacing,
+							unit: "mm",
+							onChange: (v) => pad({ stemBarSpacing: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As provided",
+							value: `${res.stemAsProvided}`,
+							unit: "mm²/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As required",
+							value: `${res.stemAsRequired}`,
+							unit: "mm²/m",
+							tone: res.stemAsRequired > res.stemAsProvided ? "rose" : "emerald"
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Base (Toe / Heel) Geometry",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Toe length",
+								value: project.toeLength,
+								unit: "mm",
+								onChange: (v) => pad({ toeLength: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Heel length",
+								value: project.heelLength,
+								unit: "mm",
+								onChange: (v) => pad({ heelLength: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Base thickness",
+								value: project.baseThickness,
+								unit: "mm",
+								onChange: (v) => pad({ baseThickness: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Embedment depth D_f",
+								value: project.embedmentDepth,
+								unit: "mm",
+								onChange: (v) => pad({ embedmentDepth: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Toe bar diameter",
+								value: project.toeBarDiameter,
+								unit: "mm",
+								onChange: (v) => pad({ toeBarDiameter: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Toe bar spacing",
+								value: project.toeBarSpacing,
+								unit: "mm",
+								onChange: (v) => pad({ toeBarSpacing: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Heel bar diameter",
+								value: project.heelBarDiameter,
+								unit: "mm",
+								onChange: (v) => pad({ heelBarDiameter: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Heel bar spacing",
+								value: project.heelBarSpacing,
+								unit: "mm",
+								onChange: (v) => pad({ heelBarSpacing: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-3 font-mono text-[11px] text-slate-500",
+						children: [
+							"B = toe + stem base width + heel = ",
+							project.toeLength,
+							" + ",
+							project.stemBaseThickness,
+							" + ",
+							project.heelLength,
+							" = ",
+							res.baseWidth,
+							" mm"
+						]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Shear Key",
+				hint: "Optional projecting nib below the footing to increase sliding resistance",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckField$1, {
+					label: "Include shear key",
+					checked: project.hasShearKey,
+					onChange: (v) => pad({ hasShearKey: v })
+				}), project.hasShearKey && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid grid-cols-2 md:grid-cols-3 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Key width",
+							value: project.keyWidth,
+							unit: "mm",
+							onChange: (v) => pad({ keyWidth: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Key depth",
+							value: project.keyDepth,
+							unit: "mm",
+							onChange: (v) => pad({ keyDepth: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Distance from toe",
+							value: project.keyDistanceFromToe,
+							unit: "mm",
+							onChange: (v) => pad({ keyDistanceFromToe: v })
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Materials & Durability",
+				hint: "αcc = 0.85 (UK NA). Main stem/toe/heel bars are on buried faces (soil contact).",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$2, {
+								label: "Concrete grade",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.fck,
+									onChange: (e) => setGrade(Number(e.target.value)),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: CONCRETE_GRADES$1.map(([g, f]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: f,
+										children: g
+									}, g))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "fyk",
+								value: project.fyk,
+								unit: "MPa",
+								onChange: (v) => pad({ fyk: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "γC",
+								value: project.gammaC,
+								step: .05,
+								onChange: (v) => pad({ gammaC: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "γS",
+								value: project.gammaS,
+								step: .05,
+								onChange: (v) => pad({ gammaS: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$2, {
+								label: "Exposure — buried faces",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.exposureClassBuried,
+									onChange: (e) => pad({ exposureClassBuried: e.target.value }),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: EXPOSURE$1.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: e,
+										children: e
+									}, e))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "c_nom buried",
+								value: project.cNomBuried,
+								unit: "mm",
+								onChange: (v) => pad({ cNomBuried: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$2, {
+								label: "Exposure — front stem face",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.exposureClassExposed,
+									onChange: (e) => pad({ exposureClassExposed: e.target.value }),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: EXPOSURE$1.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: e,
+										children: e
+									}, e))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "c_nom exposed",
+								value: project.cNomExposed,
+								unit: "mm",
+								onChange: (v) => pad({ cNomExposed: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Crack limit w_max",
+								value: project.wMax,
+								unit: "mm",
+								step: .05,
+								onChange: (v) => pad({ wMax: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Design life",
+								value: project.designLife,
+								unit: "y",
+								onChange: (v) => pad({ designLife: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+								label: "Design strengths",
+								value: `${res.fcd}`,
+								unit: `/ ${res.fyd}`,
+								sub: "fcd / fyd MPa",
+								tone: "white"
+							})
+						]
+					})
+				]
+			})
+		]
+	});
+}
+function SoilTab$1({ body }) {
+	const { project, res, pad } = body;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Backfill (Retained Side)",
+				hint: "Active earth pressure on the vertical virtual-back plane through the heel",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Unit weight γ",
+								value: project.gammaBackfill,
+								unit: "kN/m³",
+								onChange: (v) => pad({ gammaBackfill: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Friction angle φ'k",
+								value: project.phiBackfillDeg,
+								unit: "°",
+								onChange: (v) => pad({ phiBackfillDeg: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Cohesion c'k",
+								value: project.cBackfillKpa,
+								unit: "kPa",
+								onChange: (v) => pad({ cBackfillKpa: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Backfill slope β",
+								value: project.backfillSlopeDeg,
+								unit: "°",
+								onChange: (v) => pad({ backfillSlopeDeg: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 items-end",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckField$1, {
+								label: "Use Coulomb (else Rankine)",
+								checked: project.useCoulomb,
+								onChange: (v) => pad({ useCoulomb: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Wall friction δ",
+								value: project.deltaWallFrictionDeg,
+								unit: "°",
+								onChange: (v) => pad({ deltaWallFrictionDeg: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "Surcharge q",
+								value: project.surchargeKpa,
+								unit: "kPa",
+								onChange: (v) => pad({ surchargeKpa: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+								label: "ψ2 (surcharge, SLS)",
+								value: project.psi2Surcharge,
+								step: .1,
+								onChange: (v) => pad({ psi2Surcharge: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid gap-3 lg:grid-cols-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Ka (DA1-C1)",
+							value: `${res.combos.c1.kA}`,
+							sub: `φ'd = ${res.combos.c1.phiBackfillD}°`
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Ka (DA1-C2)",
+							value: `${res.combos.c2.kA}`,
+							sub: `φ'd = ${res.combos.c2.phiBackfillD}°`
+						})]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Foundation Soil (Bearing)",
+				hint: "EN 1997-1 Annex D bearing-capacity factors (strip footing, shape factor = 1)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Unit weight γ",
+							value: project.gammaFoundation,
+							unit: "kN/m³",
+							onChange: (v) => pad({ gammaFoundation: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Friction angle φ'k",
+							value: project.phiFoundationDeg,
+							unit: "°",
+							onChange: (v) => pad({ phiFoundationDeg: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Cohesion c'k",
+							value: project.cFoundationKpa,
+							unit: "kPa",
+							onChange: (v) => pad({ cFoundationKpa: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Base friction δb",
+							value: project.baseFrictionAngleDeg,
+							unit: "°",
+							onChange: (v) => pad({ baseFrictionAngleDeg: v })
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Passive Resistance (In Front of Toe)",
+				hint: "Conservatively excluded by default (future excavation / disturbance risk)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4 items-end",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckField$1, {
+							label: "Include passive resistance",
+							checked: project.includePassiveResistance,
+							onChange: (v) => pad({ includePassiveResistance: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Unit weight γ",
+							value: project.gammaPassive,
+							unit: "kN/m³",
+							onChange: (v) => pad({ gammaPassive: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Friction angle φ'k",
+							value: project.phiPassiveDeg,
+							unit: "°",
+							onChange: (v) => pad({ phiPassiveDeg: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+							label: "Mobilisation factor",
+							value: project.passiveReductionFactor,
+							step: .1,
+							onChange: (v) => pad({ passiveReductionFactor: v })
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Groundwater",
+				hint: "Depths measured from the adjacent ground surface. A large value (e.g. 50000 mm) represents no water influence.",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 gap-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+						label: "Water table depth — behind wall",
+						value: project.waterTableDepthBehindWall,
+						unit: "mm",
+						onChange: (v) => pad({ waterTableDepthBehindWall: v })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$2, {
+						label: "Water table depth — in front",
+						value: project.waterTableDepthInFront,
+						unit: "mm",
+						onChange: (v) => pad({ waterTableDepthInFront: v })
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq$2, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "σ'h(z) = Ka·σ'v(z), with σ'v using bulk γ above the water table and (γ − γw) below it; hydrostatic pw(z) = γw·(z − zw) added separately (EN 1997-1 §18 discipline: never ignore differential water pressure where it can govern)." }) })]
+			})
+		]
+	});
+}
+function StabilityTab({ body }) {
+	const { res } = body;
+	const { c1, c2 } = res.combos;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "DA1-C1 (A1+M1+R1) — structural sizing combination",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "H_d",
+							value: `${c1.hDesign}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "N_d",
+							value: `${c1.nDesign}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Eccentricity e",
+							value: `${c1.eccentricity}`,
+							unit: "m",
+							tone: c1.resultantWithinMiddleThird ? "emerald" : "amber"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Sliding UR",
+							value: `${(c1.slidingDemand / Math.max(1, c1.slidingResistance)).toFixed(2)}`,
+							tone: c1.slidingDemand > c1.slidingResistance ? "rose" : "emerald"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"q_toe = ",
+						c1.toePressure,
+						" kPa · q_heel = ",
+						c1.heelPressure,
+						" kPa"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"B' (effective width) = ",
+							c1.effectiveWidth,
+							" m"
+						]
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"Sliding: R_d = N_d·tanδb/γR + Pp,d = ",
+						c1.slidingResistance,
+						" kN/m vs H_d = ",
+						c1.hDesign,
+						" kN/m"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"Bearing: v_d = ",
+							c1.bearingDemand,
+							" kPa vs R_d = ",
+							c1.bearingResistance,
+							" kPa"
+						]
+					})] })]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "DA1-C2 (A2+M2+R1) — geotechnical sizing combination",
+				hint: "Reduced soil strength (γφ' = 1.25), reduced action factors",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "H_d",
+							value: `${c2.hDesign}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "N_d",
+							value: `${c2.nDesign}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Eccentricity e",
+							value: `${c2.eccentricity}`,
+							unit: "m",
+							tone: c2.resultantWithinMiddleThird ? "emerald" : "amber"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Bearing UR",
+							value: `${(c2.bearingDemand / Math.max(1, c2.bearingResistance)).toFixed(2)}`,
+							tone: c2.bearingDemand > c2.bearingResistance ? "rose" : "emerald"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"q_toe = ",
+						c2.toePressure,
+						" kPa · q_heel = ",
+						c2.heelPressure,
+						" kPa"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"B' (effective width) = ",
+							c2.effectiveWidth,
+							" m"
+						]
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"Sliding: R_d = ",
+						c2.slidingResistance,
+						" kN/m vs H_d = ",
+						c2.hDesign,
+						" kN/m"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"Bearing: v_d = ",
+							c2.bearingDemand,
+							" kPa vs R_d = ",
+							c2.bearingResistance,
+							" kPa"
+						]
+					})] })]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Notes & Limitations",
+				hint: "Per AGENTS.project.md discipline — nothing here is silently skipped",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "list-disc list-inside space-y-1 font-mono text-xs text-slate-400",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Both DA1 combinations are evaluated for every stability check; the governing (higher utilization) case is reported." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Global (slope) stability and settlement are NOT VERIFIED in this module — require specialist software and a geotechnical report." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Uplift water pressure at the base uses a simplified average-head approximation, not a rigorous flow-net analysis." })
+					]
+				})
+			})
+		]
+	});
+}
+function StemTab({ body }) {
+	const { res } = body;
+	const stemChecks = res.checks.filter((c) => [
+		"UL-07",
+		"UL-08",
+		"UL-14",
+		"DT-17",
+		"SL-21",
+		"SL-22"
+	].includes(c.id));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Stem Design Forces",
+				hint: "Governing of DA1-C1/DA1-C2, taken at the footing top (stem base)",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "M_Ed",
+							value: `${res.stemMEdGov}`,
+							unit: "kNm/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "V_Ed",
+							value: `${res.stemVEdGov}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "d",
+							value: `${res.dStem}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As required / provided",
+							value: `${res.stemAsRequired}`,
+							unit: `/ ${res.stemAsProvided} mm²/m`,
+							tone: res.stemAsRequired > res.stemAsProvided ? "rose" : "emerald"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "K = M_Ed/(b·d²·fck) → z = d·min(0.95, 0.5+√(0.25−K/1.134))" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"As,req = M_Ed/(fyd·z) = ",
+							res.stemAsRequired,
+							" mm²/m"
+						]
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$2, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"V_Rd,c (EN 1992-1-1 §6.2.2) = ",
+						res.stemVRdc,
+						" kN/m vs V_Ed = ",
+						res.stemVEdGov,
+						" kN/m"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"As,min = ",
+							res.stemAsMin,
+							" mm²/m"
+						]
+					})] })]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "SLS — Crack Width (Quasi-Permanent)",
+				hint: "Governed by the back-face (soil-side) reinforcement at the stem base",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "σs,Qp",
+							value: `${res.sigmaSqp}`,
+							unit: "MPa"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "w_k",
+							value: `${res.crackWidthStem}`,
+							unit: "mm",
+							tone: res.crackWidthStem > res.crackLimit ? "rose" : "emerald"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "w_max",
+							value: `${res.crackLimit}`,
+							unit: "mm"
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Stem Checks",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$2, { checks: stemChecks })
+			})
+		]
+	});
+}
+function BaseTab({ body }) {
+	const { res } = body;
+	const baseChecks = res.checks.filter((c) => [
+		"UL-09",
+		"UL-10",
+		"UL-11",
+		"UL-12",
+		"UL-13",
+		"UL-15",
+		"UL-16"
+	].includes(c.id));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Toe Cantilever",
+				hint: "Fixed at the front face of stem; net load = upward bearing pressure minus toe self-weight minus soil above toe",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "M_Ed",
+							value: `${res.toeMEdGov}`,
+							unit: "kNm/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "V_Ed",
+							value: `${res.toeVEdGov}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "d",
+							value: `${res.dToe}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As required / provided",
+							value: `${res.toeAsRequired}`,
+							unit: `/ ${res.toeAsProvided} mm²/m`,
+							tone: res.toeAsRequired > res.toeAsProvided ? "rose" : "emerald"
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Heel Cantilever",
+				hint: "Fixed at the back face of stem; net load = self-weight + backfill + surcharge above heel minus upward bearing pressure",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "M_Ed",
+							value: `${res.heelMEdGov}`,
+							unit: "kNm/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "V_Ed",
+							value: `${res.heelVEdGov}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "d",
+							value: `${res.dHeel}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As required / provided",
+							value: `${res.heelAsRequired}`,
+							unit: `/ ${res.heelAsProvided} mm²/m`,
+							tone: res.heelAsRequired > res.heelAsProvided ? "rose" : "emerald"
+						})
+					]
+				})
+			}),
+			res.keyMEd > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Shear Key (Simplified Nib Model)",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-3 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "M_Ed",
+							value: `${res.keyMEd}`,
+							unit: "kNm/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "V_Ed",
+							value: `${res.keyVEd}`,
+							unit: "kN/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "As required",
+							value: `${res.keyAsRequired}`,
+							unit: "mm²/m"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq$2, { children: "Simplified short-cantilever model under DA1-C2 passive strength — confirm with a dedicated key design if this governs." })]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Toe / Heel Checks",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$2, { checks: baseChecks })
+			})
+		]
+	});
+}
+function DetailingTab$1({ body }) {
+	const { project, res } = body;
+	const detailingChecks = res.checks.filter((c) => [
+		"DT-17",
+		"DT-18",
+		"DT-19",
+		"DT-20"
+	].includes(c.id));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Reinforcement Schedule",
+				hint: "Main bars per metre run of wall",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-3 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Stem (back face)",
+							value: `Ø${project.stemBarDiameter} @ ${project.stemBarSpacing}`,
+							unit: "mm c/c",
+							sub: `As = ${res.stemAsProvided} mm²/m`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Toe (bottom face)",
+							value: `Ø${project.toeBarDiameter} @ ${project.toeBarSpacing}`,
+							unit: "mm c/c",
+							sub: `As = ${res.toeAsProvided} mm²/m`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Heel (top face)",
+							value: `Ø${project.heelBarDiameter} @ ${project.heelBarSpacing}`,
+							unit: "mm c/c",
+							sub: `As = ${res.heelAsProvided} mm²/m`
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$2, {
+				title: "Anchorage & Detailing",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "l_bd required",
+							value: `${res.stemAnchorageRequired}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Available straight length",
+							value: `${res.stemAnchorageAvailable}`,
+							unit: "mm",
+							tone: res.stemAnchorageRequired > res.stemAnchorageAvailable ? "rose" : "emerald"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Cover — buried",
+							value: `${project.cNomBuried}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$2, {
+							label: "Cover — exposed",
+							value: `${project.cNomExposed}`,
+							unit: "mm"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 font-mono text-[11px] text-slate-500",
+					children: "Simplified straight-length anchorage check only. Confirm bend/lap detailing at the stem–footing joint and provide starter bars matching the stem reinforcement."
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$2, {
+				title: "Items Not Verified in This Module",
+				hint: "Explicitly flagged, never silently omitted (AGENTS.project.md §39)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$2, { checks: detailingChecks })
+			})
+		]
+	});
+}
+function ReportTab$2({ body }) {
+	const { project, res } = body;
+	const { c1, c2 } = res.combos;
+	const row = (id, descr, demand, resistance) => {
+		const c = res.checks.find((x) => x.id === id);
+		const status = c?.status ?? "NOT VERIFIED";
+		const u = c?.utilization ?? 0;
+		const cls = status === "FAIL" ? "text-rose-700" : status === "WARNING" ? "text-amber-700" : status === "NOT VERIFIED" ? "text-slate-500" : "text-emerald-700";
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+			className: "border-b border-slate-200",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300",
+					children: descr
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: demand
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: resistance
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 border-r border-slate-300 text-right font-bold ${u > 1 ? "text-rose-700" : ""}`,
+					children: u.toFixed(2)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 font-bold ${cls}`,
+					children: status
+				})
+			]
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6 bg-white text-slate-900 p-8 rounded-2xl shadow-2xl font-serif print-area",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "border-b-2 border-slate-900 pb-4 flex justify-between items-start no-print",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "text-2xl font-bold tracking-wide",
+				children: "ENGINEERING CALCULATION SHEET"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "text-xs font-mono text-slate-600 mt-1",
+				children: [
+					project.projectName,
+					" — Cantilever RC Retaining Wall (",
+					project.projectNumber,
+					")"
+				]
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				onClick: () => window.print(),
+				className: "flex items-center gap-1.5 rounded bg-slate-900 px-3 py-1.5 text-xs text-white",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "size-3.5" }), " Print PDF"]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "space-y-7 text-sm",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "1. Design Basis"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "list-none font-mono text-xs space-y-1",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Standards: EN 1990 · EN 1991-1-1 · EN 1992-1-1 (EC2) · EN 1997-1 (EC7)" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "National Annex: UK NA (provisional) · Design Approach 1 (DA1-C1: A1+M1+R1, DA1-C2: A2+M2+R1)" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Design working life: ",
+							project.designLife,
+							" y · Consequence class CC2 (assumed) — INPUT REQUIRED to confirm"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Exposure: ",
+							project.exposureClassBuried,
+							" (buried) / ",
+							project.exposureClassExposed,
+							" (exposed) · w_max = ",
+							project.wMax,
+							" mm · c_nom = ",
+							project.cNomBuried,
+							" / ",
+							project.cNomExposed,
+							" mm"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Concrete ",
+							project.concreteGrade,
+							" (fck = ",
+							project.fck,
+							" MPa) · ",
+							project.steelGrade,
+							" (fyk = ",
+							project.fyk,
+							" MPa) · fcd = ",
+							res.fcd,
+							" ",
+							"MPa · fyd = ",
+							res.fyd,
+							" MPa · fctm = ",
+							res.fctm,
+							" MPa"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Status: PRELIMINARY — NOT VERIFIED until National Annex, geotechnical report and exposure class are project-confirmed." })
+					]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "2. Geometry & Load Path"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"H = ",
+							(res.totalHeight / 1e3).toFixed(2),
+							" m · B = ",
+							(res.baseWidth / 1e3).toFixed(2),
+							" m · toe ",
+							project.toeLength,
+							" mm · heel",
+							" ",
+							project.heelLength,
+							" mm · base ",
+							project.baseThickness,
+							" mm"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs mt-1",
+						children: "Load path: backfill self-weight + surcharge → active/water pressure on virtual back → stem bending/shear → base of stem → toe/heel bending/shear → base pressure distribution → sliding/bearing/overturning resistance → founding soil."
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "3. Earth Pressure & Actions"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"Ka (DA1-C1) = ",
+							c1.kA,
+							" (φ'd = ",
+							c1.phiBackfillD,
+							"°) · Ka (DA1-C2) = ",
+							c2.kA,
+							" (φ'd = ",
+							c2.phiBackfillD,
+							"°)"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs mt-1",
+						children: [
+							"H_d: C1 = ",
+							c1.hDesign,
+							" kN/m · C2 = ",
+							c2.hDesign,
+							" kN/m \xA0·\xA0 N_d: C1 = ",
+							c1.nDesign,
+							" kN/m · C2 = ",
+							c2.nDesign,
+							" kN/m"
+						]
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "4. Stability Verification (Both DA1 Combinations)"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full text-left font-mono text-xs border border-slate-300",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "bg-slate-100 border-b border-slate-300",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300",
+								children: "Check"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Demand"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Resistance"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "UR"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2",
+								children: "Status"
+							})
+						]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tbody", { children: [
+						row("ST-01", "Sliding (DA1-C1)", `${c1.slidingDemand} kN/m`, `${c1.slidingResistance} kN/m`),
+						row("ST-02", "Sliding (DA1-C2)", `${c2.slidingDemand} kN/m`, `${c2.slidingResistance} kN/m`),
+						row("ST-03", "Bearing (DA1-C1)", `${c1.bearingDemand} kPa`, `${c1.bearingResistance} kPa`),
+						row("ST-04", "Bearing (DA1-C2)", `${c2.bearingDemand} kPa`, `${c2.bearingResistance} kPa`),
+						row("ST-05", "Eccentricity ≤ B/6", `${Math.max(c1.eccentricity, c2.eccentricity)} m`, `${(res.baseWidth / 6e3).toFixed(3)} m`),
+						row("ST-06", "Overturning ratio", "1.0", "—")
+					] })]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "5. Structural Verification (EN 1992-1-1)"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full text-left font-mono text-xs border border-slate-300",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "bg-slate-100 border-b border-slate-300",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300",
+								children: "Check"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Demand"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Resistance"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "UR"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2",
+								children: "Status"
+							})
+						]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tbody", { children: [
+						row("UL-07", "Stem flexure", `${res.stemAsRequired} mm²/m`, `${res.stemAsProvided} mm²/m`),
+						row("UL-08", "Stem shear", `${res.stemVEdGov} kN/m`, `${res.stemVRdc} kN/m`),
+						row("UL-09", "Toe flexure", `${res.toeAsRequired} mm²/m`, `${res.toeAsProvided} mm²/m`),
+						row("UL-10", "Toe shear", `${res.toeVEdGov} kN/m`, `${res.toeVRdc} kN/m`),
+						row("UL-11", "Heel flexure", `${res.heelAsRequired} mm²/m`, `${res.heelAsProvided} mm²/m`),
+						row("UL-12", "Heel shear", `${res.heelVEdGov} kN/m`, `${res.heelVRdc} kN/m`),
+						row("UL-14", "Min. reinforcement (stem)", `${res.stemAsMin} mm²/m`, `${res.stemAsProvided} mm²/m`),
+						row("DT-17", "Stem anchorage into footing", `${res.stemAnchorageRequired} mm`, `${res.stemAnchorageAvailable} mm`),
+						row("SL-21", "Crack width (stem, QP)", `${res.crackWidthStem} mm`, `${res.crackLimit} mm`)
+					] })]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "6. Design Limitations"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-mono text-xs",
+					children: "Global (slope) stability, settlement, construction-joint shear-friction, and heel/toe crack width are NOT VERIFIED in this module — a project geotechnical report and specialist software are required to close these out."
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "7. Conclusion"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+					"Maximum utilization ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "font-bold",
+						children: ["UR_max = ", res.utilizationMax]
+					}),
+					" (",
+					res.governingName,
+					"). Overall status:",
+					" ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: `font-bold ${res.overallStatus === "FAIL" ? "text-rose-700" : res.overallStatus === "WARNING" ? "text-amber-700" : "text-emerald-700"}`,
+						children: res.overallStatus
+					}),
+					". This AI-generated calculation is an engineering support document and shall not replace independent engineering judgement, checking, approval, or statutory responsibility."
+				] })] })
+			]
+		})]
+	});
+}
+var TABS$2 = [
+	{
+		id: "overview",
+		label: "1. Overview & HUD",
+		icon: Compass
+	},
+	{
+		id: "geometry",
+		label: "2. Geometry & Materials",
+		icon: Building2
+	},
+	{
+		id: "soil",
+		label: "3. Soil & Groundwater",
+		icon: Mountain
+	},
+	{
+		id: "stability",
+		label: "4. Stability",
+		icon: ShieldCheck
+	},
+	{
+		id: "stem",
+		label: "5. Stem Design",
+		icon: Layers
+	},
+	{
+		id: "base",
+		label: "6. Toe & Heel Design",
+		icon: Layers
+	},
+	{
+		id: "detailing",
+		label: "7. Detailing & Rebar",
+		icon: Layers
+	},
+	{
+		id: "report",
+		label: "8. Calculation Report",
+		icon: FileText
+	}
+];
+function CantileverRetainingWallView() {
+	const userEmail = useProject((s) => s.userEmail);
+	const logout = useProject((s) => s.logout);
+	const setActiveModule = useProject((s) => s.setActiveModule);
+	const [project, setProject] = (0, import_react.useState)(defaultCantileverWallProject());
+	const [activeTab, setActiveTab] = (0, import_react.useState)("overview");
+	const pad = (patch) => setProject((prev) => ({
+		...prev,
+		...patch
+	}));
+	const res = (0, import_react.useMemo)(() => analyzeCantileverWall(project), [project]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-[#07111f] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute inset-0 bg-[linear-gradient(to_right,#16263d_1px,transparent_1px),linear-gradient(to_bottom,#16263d_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-35 pointer-events-none" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "relative z-20 border-b border-[#1e3a5f]/60 bg-[#060e18]/95 backdrop-blur-md px-6 py-4 flex items-center justify-between",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveModule("modules"),
+							className: "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 font-mono text-xs transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, { className: "size-4" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Modules Dashboard" })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-5 w-px bg-slate-700 hidden sm:block" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "font-display text-sm sm:text-base font-bold tracking-wider text-white uppercase",
+							children: "CANTILEVER RC RETAINING WALL"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-[11px] font-mono text-cyan-400",
+							children: "EN 1992-1-1 · EN 1997-1 DA1 · UK NA (provisional)"
+						})] })
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3 font-mono text-xs",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `size-2 rounded-full ${res.overallStatus === "FAIL" ? "bg-rose-500" : res.overallStatus === "WARNING" ? "bg-amber-400" : "bg-emerald-500"} animate-pulse` }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+								res.overallStatus,
+								" · UR ",
+								res.utilizationMax
+							] })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: userEmail || "str.design.test" })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: logout,
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/80 hover:border-rose-700/60 border border-slate-700 text-slate-300 hover:text-rose-300 transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogOut, { className: "size-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Logout" })]
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "relative z-15 bg-[#040910]/90 border-b border-[#1e3a5f]/80 px-6 flex overflow-x-auto gap-1 font-mono text-xs",
+				children: TABS$2.map((tab) => {
+					const Icon = tab.icon;
+					const isActive = activeTab === tab.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab(tab.id),
+						className: `flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition whitespace-nowrap ${isActive ? "border-cyan-400 text-cyan-300 bg-cyan-950/40" : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"}`,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { className: `size-4 ${isActive ? "text-cyan-400" : "text-slate-500"}` }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: tab.label })]
+					}, tab.id);
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "relative z-10 flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 flex flex-col",
+				children: [
+					activeTab === "overview" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OverviewTab$2, {
+						body: {
+							project,
+							res,
+							pad
+						},
+						setActiveTab
+					}),
+					activeTab === "geometry" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeometryTab$1, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "soil" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SoilTab$1, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "stability" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StabilityTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "stem" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StemTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "base" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BaseTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "detailing" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailingTab$1, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "report" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReportTab$2, { body: {
+						project,
+						res,
+						pad
+					} })
+				]
+			})
+		]
+	});
+}
+var GAMMA_W = 9.81;
+var ES = 2e5;
+var DA1_C1 = {
+	label: "DA1-C1",
+	gammaGUnfav: 1.35,
+	gammaQ: 1.5,
+	gammaPhi: 1
+};
+var DA1_C2 = {
+	label: "DA1-C2",
+	gammaGUnfav: 1,
+	gammaQ: 1.3,
+	gammaPhi: 1.25
+};
+function round$1(value, decimals = 1) {
+	return Math.round(value * 10 ** decimals) / 10 ** decimals;
+}
+function barArea(diameter) {
+	return Math.PI * diameter * diameter / 4;
+}
+function pos$1(x, fallback) {
+	return Number.isFinite(x) && x > 0 ? x : fallback;
+}
+function nonNeg$1(x, fallback) {
+	return Number.isFinite(x) && x >= 0 ? x : fallback;
+}
+function safeRatio$1(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return 1;
+	if (resistance <= 0) return demand > 0 ? 999 : 0;
+	return round$1(Math.abs(demand) / resistance, 3);
+}
+function passFail$1(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return "NOT VERIFIED";
+	return Math.abs(demand) > resistance ? "FAIL" : "PASS";
+}
+/** Design (factored) friction angle per EN 1997-1 Annex A: phi_d = atan(tan(phi_k)/gamma_phi). */
+function designPhi(phiDeg, gammaPhi) {
+	return Math.atan(Math.tan(toRad(phiDeg)) / gammaPhi) / toRad(1);
+}
+/**
+* Integration stations (m) from the top/free end (z=0) to the base (z=H), including the
+* water-table breakpoint so the trapezoidal pressure diagram is captured exactly at the
+* dry/buoyant transition.
+*/
+function buildStations(heightM, waterDepthFromTopM, n = 41) {
+	const pts = /* @__PURE__ */ new Set();
+	for (let i = 0; i < n; i++) pts.add(round$1(heightM * i / (n - 1), 6));
+	const zw = waterDepthFromTopM;
+	if (zw > 1e-6 && zw < heightM - 1e-6) pts.add(round$1(zw, 6));
+	return Array.from(pts).sort((a, b) => a - b);
+}
+/** Characteristic horizontal earth / water / surcharge pressure components (kPa) at depth z (m from top). */
+function pressureComponents(zM, kUsed, gammaK, waterDepthFromTopM, surchargeKpa) {
+	const zw = waterDepthFromTopM;
+	return {
+		earthP: kUsed * (zM <= zw ? gammaK * zM : gammaK * zw + Math.max(0, gammaK - GAMMA_W) * (zM - zw)),
+		waterP: zM > zw ? GAMMA_W * (zM - zw) : 0,
+		surchargeP: kUsed * surchargeKpa
+	};
+}
+/**
+* Cumulative load -> shear -> moment integration from the free (top) end, z[0]=0.
+* Identical numerical pattern to the V/M-recovery step used in engine/math.ts's beamFem
+* (equilibrium integration from a free end), reimplemented locally since the stiffness/
+* spring machinery of the full FEM solver is not needed for this closed-form model.
+*/
+function integrateFreeEnd(z, p) {
+	const n = z.length;
+	const V = new Array(n).fill(0);
+	const M = new Array(n).fill(0);
+	for (let i = 1; i < n; i++) {
+		const dz = z[i] - z[i - 1];
+		V[i] = V[i - 1] + .5 * (p[i - 1] + p[i]) * dz;
+		M[i] = M[i - 1] + .5 * (V[i - 1] + V[i]) * dz;
+	}
+	return {
+		V,
+		M
+	};
+}
+/** Concise EC2 singly-reinforced rectangular section design, per metre width (b = 1000 mm). */
+function flexuralDesign(mEdKnmPerM, dMm, fckMpa, fydMpa) {
+	const b = 1e3;
+	const mEd = Math.abs(mEdKnmPerM) * 1e6;
+	if (mEd <= 0 || dMm <= 0) return {
+		asRequired: 0,
+		mRd: 0
+	};
+	const K = mEd / (b * dMm * dMm * fckMpa);
+	const Kuse = Math.min(K, .167);
+	const z = Math.min(.95 * dMm, dMm * (.5 + Math.sqrt(Math.max(0, .25 - Kuse / 1.134))));
+	const asRequired = mEd / (fydMpa * z);
+	return {
+		asRequired,
+		mRd: fydMpa * asRequired * z / 1e6
+	};
+}
+function vRdcOf(rho, dMm, fckMpa, gammaC) {
+	const k = Math.min(2, 1 + Math.sqrt(200 / dMm));
+	const rhoL = Math.min(.02, rho);
+	return Math.max(.18 / gammaC * k * Math.cbrt(100 * rhoL * fckMpa), .035 * Math.sqrt(k ** 3) * Math.sqrt(fckMpa));
+}
+function crackWidthOf(mQpKnmPerM, asProvided, dMm, hMm, barDiameter, cNom, fctm, ecm) {
+	const sigmaSqp = mQpKnmPerM > 0 ? mQpKnmPerM * 1e6 / (asProvided * .9 * dMm) / 1e3 : 0;
+	const hMinusD = Math.max(10, hMm - dMm);
+	const acEff = 1e3 * Math.min(2.5 * hMinusD, hMm / 2);
+	const rhoPeff = Math.max(1e-4, asProvided / acEff);
+	const alphaE = ES / ecm;
+	return {
+		sigmaSqp,
+		crackWidth: (3.4 * cNom + .17 * barDiameter / rhoPeff) * Math.max((sigmaSqp - .4 * (fctm / rhoPeff) * (1 + alphaE * rhoPeff)) / ES, .6 * sigmaSqp / ES)
+	};
+}
+function analyzeBasementWall(project) {
+	const checks = [];
+	const push = (id, name, category, stage, demand, demandUnit, resistance, resistanceUnit, utilization, status, clause) => checks.push({
+		id,
+		name,
+		category,
+		stage,
+		demand,
+		demandUnit,
+		resistance,
+		resistanceUnit,
+		utilization,
+		status,
+		clause
+	});
+	const p = {
+		fck: Math.max(10, pos$1(project.fck, 30)),
+		fyk: Math.max(400, pos$1(project.fyk, 500)),
+		gammaC: pos$1(project.gammaC, 1.5),
+		gammaS: pos$1(project.gammaS, 1.15),
+		alphaCC: Number.isFinite(project.alphaCC) ? project.alphaCC : .85,
+		cNomBuried: Math.max(10, pos$1(project.cNomBuried, 40)),
+		cNomWater: Math.max(10, pos$1(project.cNomWater, 50)),
+		wMax: nonNeg$1(project.wMax, .3),
+		stemHeight: pos$1(project.stemHeight, 3500),
+		wallThickness: pos$1(project.wallThickness, 300),
+		innerFaceBarDiameter: pos$1(project.innerFaceBarDiameter, 16),
+		innerFaceBarSpacing: pos$1(project.innerFaceBarSpacing, 150),
+		outerFaceBarDiameter: pos$1(project.outerFaceBarDiameter, 16),
+		outerFaceBarSpacing: pos$1(project.outerFaceBarSpacing, 150),
+		baseThickness: pos$1(project.baseThickness, 400),
+		baseSupportType: project.baseSupportType === "strip footing" ? "strip footing" : "raft",
+		baseDowelBarDiameter: pos$1(project.baseDowelBarDiameter, 16),
+		baseDowelBarSpacing: pos$1(project.baseDowelBarSpacing, 150),
+		gammaBackfill: pos$1(project.gammaBackfill, 18),
+		phiBackfillDeg: pos$1(project.phiBackfillDeg, 32),
+		cBackfillKpa: nonNeg$1(project.cBackfillKpa, 0),
+		backfillSlopeDeg: nonNeg$1(project.backfillSlopeDeg, 0),
+		useCoulomb: !!project.useCoulomb,
+		deltaWallFrictionDeg: nonNeg$1(project.deltaWallFrictionDeg, 0),
+		usePermanentK0: project.usePermanentK0 !== false,
+		constructionSurchargeKpa: nonNeg$1(project.constructionSurchargeKpa, 10),
+		serviceSurchargeKpa: nonNeg$1(project.serviceSurchargeKpa, 10),
+		psi2Surcharge: nonNeg$1(project.psi2Surcharge, .3),
+		waterTableDepthConstruction: nonNeg$1(project.waterTableDepthConstruction, 5e4),
+		waterTableDepthPermanent: nonNeg$1(project.waterTableDepthPermanent, 0)
+	};
+	const fcd = p.alphaCC * (p.fck / p.gammaC);
+	const fyd = p.fyk / p.gammaS;
+	const fctm$1 = fctm(p.fck);
+	const fctk005 = .7 * fctm$1;
+	const ecm = ecmFromFck(p.fck);
+	const Hm = p.stemHeight / 1e3;
+	const dInner = Math.max(50, p.wallThickness - p.cNomBuried - p.innerFaceBarDiameter / 2);
+	const dOuter = Math.max(50, p.wallThickness - p.cNomWater - p.outerFaceBarDiameter / 2);
+	/**
+	* Runs one stage under one partial-factor combination. Construction stage: free cantilever,
+	* base moment/shear read directly from the cumulative integration. Permanent stage: force
+	* (unit-load) method — release the top prop, integrate the cantilever moment M0(z), then
+	* solve the redundant prop reaction P = delta0/delta11 where delta0 = INTEGRAL[M0(z)*z dz]
+	* and delta11 = H^3/3 (EI cancels for the prismatic wall, so it is omitted entirely).
+	*/
+	function runStage(stage, f) {
+		const waterM = (stage === "Construction" ? p.waterTableDepthConstruction : p.waterTableDepthPermanent) / 1e3;
+		const surchargeKpa = stage === "Construction" ? p.constructionSurchargeKpa : p.serviceSurchargeKpa;
+		let kUsed;
+		let kLabel;
+		if (stage === "Permanent" && p.usePermanentK0) {
+			kUsed = k0Jak(p.phiBackfillDeg);
+			kLabel = "K0 (Jaky)";
+		} else {
+			const phiD = designPhi(p.phiBackfillDeg, f.gammaPhi);
+			const deltaD = designPhi(p.deltaWallFrictionDeg, f.gammaPhi);
+			kUsed = p.useCoulomb ? kaCoulomb(phiD, 0, p.backfillSlopeDeg, deltaD) : kaRankine(phiD);
+			kLabel = p.useCoulomb ? "Ka (Coulomb)" : "Ka (Rankine)";
+		}
+		const z = buildStations(Hm, waterM);
+		const { V: V0, M: M0 } = integrateFreeEnd(z, z.map((zM) => {
+			const { earthP, waterP, surchargeP } = pressureComponents(zM, kUsed, p.gammaBackfill, waterM, surchargeKpa);
+			return f.gammaGUnfav * (earthP + waterP) + f.gammaQ * surchargeP;
+		}));
+		if (stage === "Construction") return {
+			kUsed,
+			kLabel,
+			propReaction: 0,
+			baseMEd: Math.abs(M0[M0.length - 1]),
+			baseVEd: Math.abs(V0[V0.length - 1]),
+			spanMEd: 0,
+			spanVEd: 0,
+			spanDepthFromTop: 0
+		};
+		const numerator = trap(M0.map((m, i) => m * z[i]), z);
+		const denominator = Hm ** 3 / 3;
+		const P = denominator > 1e-9 ? numerator / denominator : 0;
+		const M = M0.map((m, i) => m - P * z[i]);
+		const V = V0.map((v) => v - P);
+		const baseMEd = Math.abs(M[M.length - 1]);
+		const baseVEd = Math.abs(V[V.length - 1]);
+		let minM = 0;
+		let minIdx = -1;
+		for (let i = 1; i < M.length - 1; i++) if (M[i] < minM) {
+			minM = M[i];
+			minIdx = i;
+		}
+		const spanMEd = minIdx >= 0 ? Math.abs(minM) : 0;
+		const spanVEd = minIdx >= 0 ? Math.abs(V[minIdx]) : 0;
+		const spanDepthFromTop = minIdx >= 0 ? z[minIdx] : 0;
+		return {
+			kUsed,
+			kLabel,
+			propReaction: P,
+			baseMEd,
+			baseVEd,
+			spanMEd,
+			spanVEd,
+			spanDepthFromTop
+		};
+	}
+	function governStage(stage) {
+		const c1 = runStage(stage, DA1_C1);
+		const c2 = runStage(stage, DA1_C2);
+		const baseGov = c1.baseMEd >= c2.baseMEd ? c1 : c2;
+		return {
+			kUsed: round$1(baseGov.kUsed, 4),
+			kLabel: baseGov.kLabel,
+			propReaction: round$1(Math.max(Math.abs(c1.propReaction), Math.abs(c2.propReaction))),
+			baseMEd: round$1(Math.max(c1.baseMEd, c2.baseMEd)),
+			baseVEd: round$1(Math.max(c1.baseVEd, c2.baseVEd)),
+			spanMEd: round$1(Math.max(c1.spanMEd, c2.spanMEd)),
+			spanVEd: round$1(Math.max(c1.spanVEd, c2.spanVEd)),
+			spanDepthFromTop: Math.round(baseGov.spanDepthFromTop * 1e3)
+		};
+	}
+	const construction = governStage("Construction");
+	const permanent = governStage("Permanent");
+	const baseMEdGov = Math.max(construction.baseMEd, permanent.baseMEd);
+	const baseGovStage = construction.baseMEd >= permanent.baseMEd ? "Construction" : "Permanent";
+	const baseVEdGov = Math.max(construction.baseVEd, permanent.baseVEd);
+	const spanMEdGov = permanent.spanMEd;
+	const spanVEdGov = permanent.spanVEd;
+	const innerAsProvided = barArea(p.innerFaceBarDiameter) * (1e3 / p.innerFaceBarSpacing);
+	const innerAsMin = Math.max(.26 * (fctm$1 / p.fyk) * 1e3 * dInner, 1.3 * dInner);
+	const innerVRdc = vRdcOf(innerAsProvided / (1e3 * dInner), dInner, p.fck, p.gammaC) * 1e3 * dInner / 1e3;
+	const outerAsProvided = barArea(p.outerFaceBarDiameter) * (1e3 / p.outerFaceBarSpacing);
+	const outerAsMin = Math.max(.26 * (fctm$1 / p.fyk) * 1e3 * dOuter, 1.3 * dOuter);
+	const outerVRdc = vRdcOf(outerAsProvided / (1e3 * dOuter), dOuter, p.fck, p.gammaC) * 1e3 * dOuter / 1e3;
+	const csBaseFlex = flexuralDesign(construction.baseMEd, dInner, p.fck, fyd);
+	const psBaseFlex = flexuralDesign(permanent.baseMEd, dInner, p.fck, fyd);
+	const psSpanFlex = flexuralDesign(permanent.spanMEd, dOuter, p.fck, fyd);
+	const innerAsRequired = Math.max(csBaseFlex.asRequired, psBaseFlex.asRequired);
+	const outerAsRequired = psSpanFlex.asRequired;
+	push("UL-01", "Construction-stage base flexure (back face)", "ULS", "Construction", csBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", safeRatio$1(csBaseFlex.asRequired, innerAsProvided), passFail$1(csBaseFlex.asRequired, innerAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-02", "Construction-stage base shear (back face)", "ULS", "Construction", construction.baseVEd, "kN/m", innerVRdc, "kN/m", safeRatio$1(construction.baseVEd, innerVRdc), passFail$1(construction.baseVEd, innerVRdc), "EN 1992-1-1 §6.2.2");
+	push("UL-03", "Permanent-stage base flexure (back face)", "ULS", "Permanent", psBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", safeRatio$1(psBaseFlex.asRequired, innerAsProvided), passFail$1(psBaseFlex.asRequired, innerAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-04", "Permanent-stage base shear (back face)", "ULS", "Permanent", permanent.baseVEd, "kN/m", innerVRdc, "kN/m", safeRatio$1(permanent.baseVEd, innerVRdc), passFail$1(permanent.baseVEd, innerVRdc), "EN 1992-1-1 §6.2.2");
+	push("UL-05", "Permanent-stage span flexure (front face)", "ULS", "Permanent", psSpanFlex.asRequired, "mm²/m", outerAsProvided, "mm²/m", safeRatio$1(psSpanFlex.asRequired, outerAsProvided), passFail$1(psSpanFlex.asRequired, outerAsProvided), "EN 1992-1-1 §6.1");
+	push("UL-06", "Permanent-stage span shear (front face)", "ULS", "Permanent", permanent.spanVEd, "kN/m", outerVRdc, "kN/m", safeRatio$1(permanent.spanVEd, outerVRdc), passFail$1(permanent.spanVEd, outerVRdc), "EN 1992-1-1 §6.2.2");
+	push("UL-07", "Minimum reinforcement — inner (back) face", "ULS", "Both", innerAsMin, "mm²/m", innerAsProvided, "mm²/m", safeRatio$1(innerAsMin, innerAsProvided), passFail$1(innerAsMin, innerAsProvided), "EN 1992-1-1 §9.2.1.1");
+	push("UL-08", "Minimum reinforcement — outer (front) face", "ULS", "Permanent", outerAsMin, "mm²/m", outerAsProvided, "mm²/m", safeRatio$1(outerAsMin, outerAsProvided), passFail$1(outerAsMin, outerAsProvided), "EN 1992-1-1 §9.2.1.1");
+	const fbd = 2.25 * (fctk005 / p.gammaC);
+	const baseDowelAnchorageRequired = p.baseDowelBarDiameter / 4 * (fyd / fbd);
+	const baseDowelAnchorageAvailable = Math.max(0, p.baseThickness - 2 * p.cNomBuried);
+	push("DT-09", "Base dowel / starter bar anchorage into base slab", "Durability", "Both", baseDowelAnchorageRequired, "mm", baseDowelAnchorageAvailable, "mm", safeRatio$1(baseDowelAnchorageRequired, baseDowelAnchorageAvailable), passFail$1(baseDowelAnchorageRequired, baseDowelAnchorageAvailable), "EN 1992-1-1 §8.4 (simplified straight length)");
+	push("DT-10", "Curtailment of hogging steel past point of contraflexure", "Durability", "Permanent", 0, "-", 0, "-", 0, "NOT VERIFIED", "Out of scope — verify bar cut-off/anchorage lengths separately per EN 1992-1-1 §9.2.1.3 / §8.4");
+	push("LP-11", "Top prop reaction -> ground-floor slab/diaphragm design input", "Load Path", "Permanent", permanent.propReaction, "kN/m", 0, "-", 0, "NOT VERIFIED", "Load path — demand only; ground-floor slab/diaphragm design out of scope");
+	push("LP-12", "Base reaction (M, V) -> base slab/footing design input", "Load Path", "Both", baseMEdGov, "kNm/m", baseVEdGov, "kN/m", 0, "NOT VERIFIED", "Load path — demand only; base slab/footing design out of scope");
+	const qpPermanent = runStage("Permanent", {
+		label: "QP",
+		gammaGUnfav: 1,
+		gammaQ: p.psi2Surcharge,
+		gammaPhi: 1
+	});
+	const innerCrack = crackWidthOf(qpPermanent.baseMEd, innerAsProvided, dInner, p.wallThickness, p.innerFaceBarDiameter, p.cNomBuried, fctm$1, ecm);
+	const outerCrack = crackWidthOf(qpPermanent.spanMEd, outerAsProvided, dOuter, p.wallThickness, p.outerFaceBarDiameter, p.cNomWater, fctm$1, ecm);
+	push("SL-13", "Crack width — inner face at base (quasi-permanent)", "SLS", "Permanent", innerCrack.crackWidth, "mm", p.wMax, "mm", safeRatio$1(innerCrack.crackWidth, p.wMax), passFail$1(innerCrack.crackWidth, p.wMax), "EN 1992-1-1 §7.3.4");
+	push("SL-14", "Crack width — outer face at span (quasi-permanent)", "SLS", "Permanent", outerCrack.crackWidth, "mm", p.wMax, "mm", safeRatio$1(outerCrack.crackWidth, p.wMax), passFail$1(outerCrack.crackWidth, p.wMax), "EN 1992-1-1 §7.3.4");
+	push("DR-15", `Global bearing / sliding of raft (baseSupportType="${p.baseSupportType}")`, "Durability", "Both", 0, "-", 0, "-", 0, "NOT VERIFIED", "Delegated to the building's overall raft/foundation design — not verified in this module");
+	push("DR-16", "Water resistance / waterproofing grade (e.g. BS 8102)", "Durability", "Both", 0, "-", 0, "-", 0, "NOT VERIFIED", "Specialist waterproofing design — out of structural scope; structural water pressure only is included in loading");
+	const listing = [...checks].sort((a, b) => b.utilization - a.utilization);
+	const utilizationMax = listing.reduce((a, b) => Math.max(a, b.utilization), 0);
+	const failed = listing.find((c) => c.status === "FAIL");
+	let overallStatus = "PASS";
+	if (failed) overallStatus = "FAIL";
+	else if (listing.some((c) => c.status === "WARNING") || utilizationMax > .9) overallStatus = "WARNING";
+	return {
+		fcd: round$1(fcd),
+		fyd: round$1(fyd, 1),
+		fctm: round$1(fctm$1, 2),
+		fctk005: round$1(fctk005, 2),
+		ecm: Math.round(ecm),
+		dInner: Math.round(dInner),
+		dOuter: Math.round(dOuter),
+		construction,
+		permanent,
+		baseMEdGov: round$1(baseMEdGov),
+		baseVEdGov: round$1(baseVEdGov),
+		baseGovStage,
+		spanMEdGov: round$1(spanMEdGov),
+		spanVEdGov: round$1(spanVEdGov),
+		innerAsRequired: Math.round(innerAsRequired),
+		innerAsProvided: Math.round(innerAsProvided),
+		innerAsMin: Math.round(innerAsMin),
+		innerVRdc: round$1(innerVRdc),
+		outerAsRequired: Math.round(outerAsRequired),
+		outerAsProvided: Math.round(outerAsProvided),
+		outerAsMin: Math.round(outerAsMin),
+		outerVRdc: round$1(outerVRdc),
+		baseDowelAnchorageRequired: Math.round(baseDowelAnchorageRequired),
+		baseDowelAnchorageAvailable: Math.round(baseDowelAnchorageAvailable),
+		sigmaSqpInner: round$1(innerCrack.sigmaSqp),
+		crackWidthInner: round$1(innerCrack.crackWidth, 3),
+		sigmaSqpOuter: round$1(outerCrack.sigmaSqp),
+		crackWidthOuter: round$1(outerCrack.crackWidth, 3),
+		crackLimit: p.wMax,
+		checks: listing,
+		utilizationMax: round$1(utilizationMax, 2),
+		governingName: listing[0]?.name ?? "—",
+		overallStatus
+	};
+}
+var defaultBasementWallProject = () => ({
+	projectName: "Demonstration Basement Retaining Wall",
+	projectNumber: "BW-2026-PROP",
+	client: "Building Client Ltd",
+	designer: "Lead Structural Engineer",
+	concreteGrade: "C30/37",
+	steelGrade: "B500C",
+	fck: 30,
+	fyk: 500,
+	gammaC: 1.5,
+	gammaS: 1.15,
+	alphaCC: .85,
+	exposureClassBuried: "XC2",
+	exposureClassWater: "XC3",
+	designLife: 50,
+	cNomBuried: 40,
+	cNomWater: 50,
+	wMax: .3,
+	stemHeight: 3500,
+	wallThickness: 300,
+	innerFaceBarDiameter: 16,
+	innerFaceBarSpacing: 150,
+	outerFaceBarDiameter: 16,
+	outerFaceBarSpacing: 150,
+	baseThickness: 400,
+	baseSupportType: "raft",
+	baseDowelBarDiameter: 16,
+	baseDowelBarSpacing: 150,
+	gammaBackfill: 18,
+	phiBackfillDeg: 32,
+	cBackfillKpa: 0,
+	backfillSlopeDeg: 0,
+	useCoulomb: false,
+	deltaWallFrictionDeg: 0,
+	usePermanentK0: true,
+	constructionSurchargeKpa: 10,
+	serviceSurchargeKpa: 10,
+	psi2Surcharge: .3,
+	waterTableDepthConstruction: 5e4,
+	waterTableDepthPermanent: 0
+});
+function StatusBadge$1({ status }) {
+	const cls = status === "PASS" ? "bg-emerald-950 border-emerald-600 text-emerald-400" : status === "WARNING" ? "bg-amber-950 border-amber-600 text-amber-300" : status === "FAIL" ? "bg-rose-950 border-rose-600 text-rose-400" : "bg-slate-800 border-slate-600 text-slate-300";
+	const icon = status === "PASS" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "size-3" }) : status === "WARNING" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+		className: `inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-mono ${cls}`,
+		children: [icon, status]
+	});
+}
+function StatCard$1({ label, value, unit, sub, tone = "cyan" }) {
+	const color = {
+		cyan: "text-cyan-300",
+		white: "text-white",
+		emerald: "text-emerald-400",
+		amber: "text-amber-400",
+		rose: "text-rose-400"
+	}[tone];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/90 border border-cyan-500/30 rounded-xl p-4",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400",
+				children: label
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: `text-2xl font-mono font-bold mt-1 ${color}`,
+				children: [
+					value,
+					" ",
+					unit && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-xs text-cyan-400",
+						children: unit
+					})
+				]
+			}),
+			sub && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-[11px] font-mono text-slate-500 mt-1",
+				children: sub
+			})
+		]
+	});
+}
+function NumField$1({ label, value, unit, onChange, min, max, step = 1 }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: [label, unit && ` (${unit})`]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+			type: "number",
+			value: Number.isFinite(value) ? value : 0,
+			min,
+			max,
+			step,
+			onChange: (e) => onChange(Number(e.target.value)),
+			className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
+		})]
+	});
+}
+function CheckField({ label, checked, onChange }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "flex items-center gap-2 text-xs text-slate-300 font-mono",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+			type: "checkbox",
+			checked,
+			onChange: (e) => onChange(e.target.checked),
+			className: "size-4 accent-cyan-500"
+		}), label]
+	});
+}
+function Field$1({ label, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: label
+		}), children]
+	});
+}
+function Section$1({ title, hint, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex items-center justify-between border-b border-cyan-900/60 pb-4 mb-6 gap-3 flex-wrap",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "font-display text-xl font-bold text-white",
+				children: title
+			}), hint && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400 mt-1",
+				children: hint
+			})] })
+		}), children]
+	});
+}
+function ChecksTable$1({ checks }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "overflow-x-auto",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+			className: "w-full text-left font-mono text-xs",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+				className: "border-b border-slate-700 text-cyan-400 bg-cyan-950/30",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Check"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Stage"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Demand"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Resistance"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "UR"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Status"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Clause"
+					})
+				]
+			}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", {
+				className: "divide-y divide-slate-800",
+				children: checks.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+					className: "hover:bg-slate-900/50",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "rounded bg-cyan-950 px-1.5 py-0.5 text-[10px] text-cyan-300",
+									children: c.id
+								}),
+								" ",
+								c.name
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3 text-slate-400",
+							children: c.stage
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.demand.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.demandUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.resistance.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.resistanceUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: `p-3 text-right font-bold ${c.utilization > 1 ? "text-rose-400" : c.utilization > .9 ? "text-amber-400" : "text-emerald-400"}`,
+							children: c.utilization.toFixed(2)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge$1, { status: c.status })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3 text-slate-500",
+							children: c.clause
+						})
+					]
+				}, c.id))
+			})]
+		})
+	});
+}
+function Eq$1({ children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "rounded-lg bg-[#03070e] border border-cyan-900/60 p-3 font-mono text-xs text-cyan-100 overflow-x-auto",
+		children
+	});
+}
+var MONO$1 = "JetBrains Mono, monospace";
+/** Elevation: base fixity, top prop (slab), and the moment-diagram sign reversal for the permanent stage. */
+function BasementWallSection({ project, result }) {
+	const H = 460;
+	const padX = 110;
+	const padTop = 50;
+	const scale = 370 / (project.stemHeight + project.baseThickness);
+	const wallScale = Math.max(scale * 6, .6);
+	const baseTopY = padTop + project.stemHeight * scale;
+	const baseBottomY = baseTopY + project.baseThickness * scale;
+	const topY = padTop;
+	const wallX0 = padX;
+	const wallX1 = wallX0 + project.wallThickness * wallScale;
+	const backfillX1 = 710;
+	const mdX0 = 740;
+	const baseM = result.permanent.baseMEd;
+	const spanM = result.permanent.spanMEd;
+	const mScale = 30 / Math.max(1, Math.max(baseM, spanM));
+	const spanY = padTop + result.permanent.spanDepthFromTop / 1e3 * scale;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+		viewBox: `0 0 870 ${H}`,
+		className: "w-full h-auto max-w-full",
+		role: "img",
+		"aria-label": "Basement retaining wall elevation",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("defs", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pattern", {
+				id: "bwSoil",
+				width: "8",
+				height: "8",
+				patternUnits: "userSpaceOnUse",
+				patternTransform: "rotate(45)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+					x1: "0",
+					y1: "0",
+					x2: "0",
+					y2: "8",
+					stroke: "#7d6650",
+					strokeWidth: "1.2",
+					strokeOpacity: "0.55"
+				})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pattern", {
+				id: "bwHatch",
+				width: "6",
+				height: "6",
+				patternUnits: "userSpaceOnUse",
+				patternTransform: "rotate(45)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+					x1: "0",
+					y1: "0",
+					x2: "0",
+					y2: "6",
+					stroke: "#64748b",
+					strokeWidth: "1"
+				})
+			})] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: wallX1,
+				y: topY,
+				width: backfillX1 - wallX1,
+				height: baseBottomY - topY,
+				fill: "url(#bwSoil)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: wallX1,
+				y1: topY,
+				x2: backfillX1,
+				y2: topY,
+				stroke: "#a3866a",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: 20,
+				y: baseTopY,
+				width: 690,
+				height: baseBottomY - baseTopY,
+				fill: "rgba(6,182,212,0.1)",
+				stroke: "#38bdf8",
+				strokeWidth: "2"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: 20,
+				y: baseTopY - 8,
+				width: 40,
+				height: 8,
+				fill: "url(#bwHatch)",
+				stroke: "#64748b",
+				strokeWidth: "1"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: 25,
+				y: baseTopY - 12,
+				fill: "#64748b",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: "Fixed base"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: wallX0,
+				y: topY,
+				width: wallX1 - wallX0,
+				height: baseTopY - topY,
+				fill: "rgba(6,182,212,0.14)",
+				stroke: "#38bdf8",
+				strokeWidth: "2"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: 50,
+				y: 40,
+				width: wallX1 - wallX0 + 60,
+				height: 10,
+				fill: "rgba(6,182,212,0.1)",
+				stroke: "#38bdf8",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+				cx: (wallX0 + wallX1) / 2,
+				cy: topY,
+				r: 5,
+				fill: "#0b1a2c",
+				stroke: "#fef08a",
+				strokeWidth: "2"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: 52,
+				y: 36,
+				fill: "#64748b",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: "Pinned prop (G.F. slab)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+				points: `${wallX1},${topY} ${wallX1 + 20},${baseTopY} ${wallX1},${baseTopY}`,
+				fill: "none",
+				stroke: "#94a3b8",
+				strokeDasharray: "4 3",
+				strokeWidth: "1.3"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: wallX1 + 24,
+				y: (topY + baseTopY) / 2 - 30,
+				fill: "#94a3b8",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: "Construction (Ka)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
+				points: `${wallX1},${topY} ${wallX1 + 38},${baseTopY} ${wallX1},${baseTopY}`,
+				fill: "rgba(245,158,11,0.16)",
+				stroke: "#f59e0b",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: wallX1 + 42,
+				y: (topY + baseTopY) / 2 + 10,
+				fill: "#f59e0b",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: [
+					"Permanent (",
+					result.permanent.kLabel,
+					")"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: mdX0,
+				y1: topY,
+				x2: mdX0,
+				y2: baseTopY,
+				stroke: "#475569",
+				strokeWidth: "1"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", {
+				points: `${mdX0},${topY} ${mdX0 - spanM * mScale},${spanY} ${mdX0 + baseM * mScale},${baseTopY}`,
+				fill: "none",
+				stroke: "#22d3ee",
+				strokeWidth: "1.8"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: 744,
+				y: 60,
+				fill: "#94a3b8",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: "M(z)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: mdX0 - spanM * mScale - 6,
+				y: spanY,
+				textAnchor: "end",
+				fill: "#22d3ee",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: ["sag ", spanM.toFixed(0)]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: mdX0 + baseM * mScale + 6,
+				y: baseTopY,
+				fill: "#22d3ee",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: ["hog ", baseM.toFixed(0)]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 104,
+				y: 30,
+				textAnchor: "end",
+				fill: "#cbd5e1",
+				fontSize: "10",
+				fontFamily: MONO$1,
+				children: [
+					"H = ",
+					(project.stemHeight / 1e3).toFixed(2),
+					" m"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: wallX1 + 4,
+				y: 30,
+				fill: "#a3866a",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: [
+					"γ=",
+					project.gammaBackfill,
+					" φ'=",
+					project.phiBackfillDeg,
+					"°"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: wallX0,
+				y: baseBottomY + 16,
+				fill: "#94a3b8",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: [
+					"t = ",
+					project.wallThickness,
+					" mm · base ",
+					project.baseThickness,
+					" mm"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: wallX0,
+				y: baseBottomY + 30,
+				fill: "#fef08a",
+				fontSize: "9",
+				fontFamily: MONO$1,
+				children: [
+					"Prop reaction P = ",
+					result.permanent.propReaction,
+					" kN/m"
+				]
+			})
+		]
+	});
+}
+function OverviewTab$1({ body, setActiveTab }) {
+	const { project, res } = body;
+	const governing = res.checks[0];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Elevation & Governing State",
+				hint: "Construction stage (free cantilever, Ka) and permanent stage (top-propped, K0 by default) are both checked",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-6 lg:grid-cols-[2fr_1fr]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "bg-[#03070e] border border-slate-800 rounded-xl p-3",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BasementWallSection, {
+							project,
+							result: res
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Overall status",
+								value: res.overallStatus,
+								sub: `UR_max = ${res.utilizationMax}`,
+								tone: res.overallStatus === "FAIL" ? "rose" : res.overallStatus === "WARNING" ? "amber" : "emerald"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Governing check",
+								value: governing?.id ?? "—",
+								sub: governing?.name ?? "—",
+								tone: "white"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Wall height H",
+								value: (project.stemHeight / 1e3).toFixed(2),
+								unit: "m",
+								sub: `Thickness t = ${project.wallThickness} mm`
+							})
+						]
+					})]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Base moment (governing)",
+						value: `${res.baseMEdGov}`,
+						unit: "kNm/m",
+						sub: `${res.baseGovStage} stage`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Span moment (permanent)",
+						value: `${res.spanMEdGov}`,
+						unit: "kNm/m",
+						sub: `at ${res.permanent.spanDepthFromTop} mm from top`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Top prop reaction",
+						value: `${res.permanent.propReaction}`,
+						unit: "kN/m",
+						sub: "-> ground-floor slab design"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Earth pressure basis",
+						value: res.permanent.kLabel,
+						sub: `k = ${res.permanent.kUsed}`
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Design Check Matrix",
+				hint: "All ULS / SLS / load-path / durability checks, most critical first",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$1, { checks: res.checks }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 flex flex-wrap gap-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveTab("construction"),
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+							children: ["Construction stage ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveTab("permanent"),
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+							children: ["Permanent stage ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveTab("report"),
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+							children: ["Calculation report ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-center gap-2 text-xs font-mono text-slate-500",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge$1, { status: res.overallStatus }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "This AI-generated calculation is an engineering support document and does not replace independent checking and approval." })]
+			})
+		]
+	});
+}
+var CONCRETE_GRADES = [
+	["C25/30", 25],
+	["C30/37", 30],
+	["C35/45", 35],
+	["C40/50", 40]
+];
+var EXPOSURE = [
+	["XC1", .4],
+	["XC2", .3],
+	["XC3", .3],
+	["XC4", .3],
+	["XD1", .3]
+];
+function GeometryTab({ body }) {
+	const { project, res, pad } = body;
+	const setGrade = (fck) => {
+		const grade = CONCRETE_GRADES.find(([, f]) => f === fck);
+		pad({
+			fck,
+			concreteGrade: grade ? grade[0] : project.concreteGrade
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Wall Geometry",
+				hint: "Prismatic wall spanning base (fixed) to top prop (pinned); EI cancels out of the propped-cantilever force method",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Stem height H",
+							value: project.stemHeight,
+							unit: "mm",
+							onChange: (v) => pad({ stemHeight: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Wall thickness t",
+							value: project.wallThickness,
+							unit: "mm",
+							onChange: (v) => pad({ wallThickness: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "d (inner, back face)",
+							value: `${res.dInner}`,
+							unit: "mm",
+							sub: "resists base hogging"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "d (outer, front face)",
+							value: `${res.dOuter}`,
+							unit: "mm",
+							sub: "resists span sagging"
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Reinforcement — Two Face",
+				hint: "Inner/back face for base hogging; outer/front face for permanent-stage span sagging",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Inner face bar diameter",
+							value: project.innerFaceBarDiameter,
+							unit: "mm",
+							onChange: (v) => pad({ innerFaceBarDiameter: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Inner face bar spacing",
+							value: project.innerFaceBarSpacing,
+							unit: "mm",
+							onChange: (v) => pad({ innerFaceBarSpacing: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "As provided (inner)",
+							value: `${res.innerAsProvided}`,
+							unit: "mm²/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "As required (inner)",
+							value: `${res.innerAsRequired}`,
+							unit: "mm²/m",
+							tone: res.innerAsRequired > res.innerAsProvided ? "rose" : "emerald"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Outer face bar diameter",
+							value: project.outerFaceBarDiameter,
+							unit: "mm",
+							onChange: (v) => pad({ outerFaceBarDiameter: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Outer face bar spacing",
+							value: project.outerFaceBarSpacing,
+							unit: "mm",
+							onChange: (v) => pad({ outerFaceBarSpacing: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "As provided (outer)",
+							value: `${res.outerAsProvided}`,
+							unit: "mm²/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "As required (outer)",
+							value: `${res.outerAsRequired}`,
+							unit: "mm²/m",
+							tone: res.outerAsRequired > res.outerAsProvided ? "rose" : "emerald"
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Base Slab",
+				hint: "Default: wall base monolithic with the building's raft — global sliding/bearing delegated to the raft design",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Base thickness",
+							value: project.baseThickness,
+							unit: "mm",
+							onChange: (v) => pad({ baseThickness: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+							label: "Base support type",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+								value: project.baseSupportType,
+								onChange: (e) => pad({ baseSupportType: e.target.value === "strip footing" ? "strip footing" : "raft" }),
+								className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+									value: "raft",
+									children: "Raft (monolithic)"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+									value: "strip footing",
+									children: "Strip footing (future)"
+								})]
+							})
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Dowel bar diameter",
+							value: project.baseDowelBarDiameter,
+							unit: "mm",
+							onChange: (v) => pad({ baseDowelBarDiameter: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Dowel bar spacing",
+							value: project.baseDowelBarSpacing,
+							unit: "mm",
+							onChange: (v) => pad({ baseDowelBarSpacing: v })
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Materials & Durability",
+				hint: "αcc = 0.85 (UK NA). Inner face buried/soil contact; outer face water/exposed contact.",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								label: "Concrete grade",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.fck,
+									onChange: (e) => setGrade(Number(e.target.value)),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: CONCRETE_GRADES.map(([g, f]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: f,
+										children: g
+									}, g))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "fyk",
+								value: project.fyk,
+								unit: "MPa",
+								onChange: (v) => pad({ fyk: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "γC",
+								value: project.gammaC,
+								step: .05,
+								onChange: (v) => pad({ gammaC: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "γS",
+								value: project.gammaS,
+								step: .05,
+								onChange: (v) => pad({ gammaS: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								label: "Exposure — inner (buried) face",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.exposureClassBuried,
+									onChange: (e) => pad({ exposureClassBuried: e.target.value }),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: EXPOSURE.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: e,
+										children: e
+									}, e))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "c_nom inner",
+								value: project.cNomBuried,
+								unit: "mm",
+								onChange: (v) => pad({ cNomBuried: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								label: "Exposure — outer (water) face",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+									value: project.exposureClassWater,
+									onChange: (e) => pad({ exposureClassWater: e.target.value }),
+									className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+									children: EXPOSURE.map(([e]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: e,
+										children: e
+									}, e))
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "c_nom outer",
+								value: project.cNomWater,
+								unit: "mm",
+								onChange: (v) => pad({ cNomWater: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Crack limit w_max",
+								value: project.wMax,
+								unit: "mm",
+								step: .05,
+								onChange: (v) => pad({ wMax: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Design life",
+								value: project.designLife,
+								unit: "y",
+								onChange: (v) => pad({ designLife: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Design strengths",
+								value: `${res.fcd}`,
+								unit: `/ ${res.fyd}`,
+								sub: "fcd / fyd MPa",
+								tone: "white"
+							})
+						]
+					})
+				]
+			})
+		]
+	});
+}
+function SoilTab({ body }) {
+	const { project, res, pad } = body;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Backfill (Retained Side)",
+				hint: "Active pressure for construction stage; at-rest (K0) or active for permanent stage",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Unit weight γ",
+								value: project.gammaBackfill,
+								unit: "kN/m³",
+								onChange: (v) => pad({ gammaBackfill: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Friction angle φ'k",
+								value: project.phiBackfillDeg,
+								unit: "°",
+								onChange: (v) => pad({ phiBackfillDeg: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Cohesion c'k",
+								value: project.cBackfillKpa,
+								unit: "kPa",
+								onChange: (v) => pad({ cBackfillKpa: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Backfill slope β",
+								value: project.backfillSlopeDeg,
+								unit: "°",
+								onChange: (v) => pad({ backfillSlopeDeg: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 items-end",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckField, {
+								label: "Use Coulomb (else Rankine)",
+								checked: project.useCoulomb,
+								onChange: (v) => pad({ useCoulomb: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+								label: "Wall friction δ",
+								value: project.deltaWallFrictionDeg,
+								unit: "°",
+								onChange: (v) => pad({ deltaWallFrictionDeg: v })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CheckField, {
+								label: "Permanent stage: use K0 (at-rest)",
+								checked: project.usePermanentK0,
+								onChange: (v) => pad({ usePermanentK0: v })
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4 grid gap-3 lg:grid-cols-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Construction: k used",
+								value: `${res.construction.kUsed}`,
+								sub: res.construction.kLabel
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "Permanent: k used",
+								value: `${res.permanent.kUsed}`,
+								sub: res.permanent.kLabel
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+								label: "K0 (Jaky, char. φ')",
+								value: `${(1 - Math.sin(project.phiBackfillDeg * Math.PI / 180)).toFixed(3)}`,
+								sub: "1 − sin(φ'k)"
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq$1, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "Permanent stage default: K0 = 1 − sin(φ'k) (Jaky) — a propped, undeflected wall is assumed not to mobilise full active pressure. Toggle off to use Ka (Rankine/Coulomb) as an explicitly labelled ASSUMED alternative." }) })
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Surcharge",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-3 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Construction surcharge",
+							value: project.constructionSurchargeKpa,
+							unit: "kPa",
+							onChange: (v) => pad({ constructionSurchargeKpa: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "Service surcharge",
+							value: project.serviceSurchargeKpa,
+							unit: "kPa",
+							onChange: (v) => pad({ serviceSurchargeKpa: v })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+							label: "ψ2 (surcharge, SLS)",
+							value: project.psi2Surcharge,
+							step: .1,
+							onChange: (v) => pad({ psi2Surcharge: v })
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Groundwater",
+				hint: "Depths measured from the top of the wall (ground-floor slab level). 0 mm = water at ground surface (worst case).",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 gap-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+						label: "Water table depth — construction stage",
+						value: project.waterTableDepthConstruction,
+						unit: "mm",
+						onChange: (v) => pad({ waterTableDepthConstruction: v })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField$1, {
+						label: "Water table depth — permanent stage",
+						value: project.waterTableDepthPermanent,
+						unit: "mm",
+						onChange: (v) => pad({ waterTableDepthPermanent: v })
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq$1, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "σ'h(z) = k·σ'v(z), with σ'v using bulk γ above the water table and (γ − γw) below it; hydrostatic pw(z) = γw·(z − zw) added separately (never ignore differential water pressure where it can govern)." }) })]
+			})
+		]
+	});
+}
+function ConstructionStageTab({ body }) {
+	const { res } = body;
+	const stageChecks = res.checks.filter((c) => c.stage === "Construction" || c.stage === "Both" && ["UL-07", "DT-09"].includes(c.id));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+			title: "Construction Stage — Free Cantilever",
+			hint: "Wall fixed at base only, free at top (ground-floor slab prop not yet cast); active pressure Ka",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "k used",
+						value: `${res.construction.kUsed}`,
+						sub: res.construction.kLabel
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Base M_Ed",
+						value: `${res.construction.baseMEd}`,
+						unit: "kNm/m"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "Base V_Ed",
+						value: `${res.construction.baseVEd}`,
+						unit: "kN/m"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+						label: "d (inner)",
+						value: `${res.dInner}`,
+						unit: "mm"
+					})
+				]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-4 grid gap-3 lg:grid-cols-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$1, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "Cantilever, fixed at base (z=H): M0(z) = ∫0^z V0(s) ds, V0(z) = ∫0^z p(s) ds, from the free top (z=0)" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "text-slate-400 mt-1",
+					children: [
+						"Base moment M0(H) = ",
+						res.construction.baseMEd,
+						" kNm/m (governs the base if larger than the permanent stage)"
+					]
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$1, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "K = M_Ed/(b·d²·fck) → z = d·min(0.95, 0.5+√(0.25−K/1.134)); As,req = M_Ed/(fyd·z)" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "text-slate-400 mt-1",
+					children: [
+						"As,req (inner, this stage) vs As,prov = ",
+						res.innerAsProvided,
+						" mm²/m"
+					]
+				})] })]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+			title: "Construction Stage Checks",
+			hint: "Back-face flexure/shear at the base, checked against the same reinforcement provided for the permanent stage",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$1, { checks: stageChecks })
+		})]
+	});
+}
+function PermanentStageTab({ body }) {
+	const { res } = body;
+	const stageChecks = res.checks.filter((c) => c.stage === "Permanent" || c.category === "Load Path");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Permanent Stage — Top-Propped",
+				hint: "Base fixed into the base slab, top pinned by the ground-floor slab; unit-load (force) method for the redundant prop reaction",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "k used",
+							value: `${res.permanent.kUsed}`,
+							sub: res.permanent.kLabel
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Prop reaction P",
+							value: `${res.permanent.propReaction}`,
+							unit: "kN/m",
+							tone: "amber"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Base M_Ed (hogging)",
+							value: `${res.permanent.baseMEd}`,
+							unit: "kNm/m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Span M_Ed (sagging)",
+							value: `${res.permanent.spanMEd}`,
+							unit: "kNm/m",
+							sub: `at ${res.permanent.spanDepthFromTop} mm from top`
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$1, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "P = δ0/δ11, δ0 = ∫0^H M0(z)·z dz, δ11 = H³/3 (EI cancels for the prismatic wall)" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "text-slate-400 mt-1",
+						children: "M(z) = M0(z) − P·z, V(z) = V0(z) − P"
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq$1, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"Base (hogging, inner face): M_Ed = ",
+						res.permanent.baseMEd,
+						" kNm/m, V_Ed = ",
+						res.permanent.baseVEd,
+						" kN/m"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "text-slate-400 mt-1",
+						children: [
+							"Span (sagging, outer face): M_Ed = ",
+							res.permanent.spanMEd,
+							" kNm/m, V_Ed = ",
+							res.permanent.spanVEd,
+							" kN/m"
+						]
+					})] })]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "SLS — Crack Width (Quasi-Permanent)",
+				hint: "G characteristic + ψ2·Q; checked at the base (inner face) and at the span (outer face)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "σs,Qp (inner)",
+							value: `${res.sigmaSqpInner}`,
+							unit: "MPa"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "w_k (inner)",
+							value: `${res.crackWidthInner}`,
+							unit: "mm",
+							tone: res.crackWidthInner > res.crackLimit ? "rose" : "emerald"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "σs,Qp (outer)",
+							value: `${res.sigmaSqpOuter}`,
+							unit: "MPa"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "w_k (outer)",
+							value: `${res.crackWidthOuter}`,
+							unit: "mm",
+							tone: res.crackWidthOuter > res.crackLimit ? "rose" : "emerald"
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Permanent Stage & Load Path Checks",
+				hint: "Front-face span checks only exist in this stage; prop and base reactions are reported as load-path demands (NOT VERIFIED — feed adjacent element design)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$1, { checks: stageChecks })
+			})
+		]
+	});
+}
+function DetailingTab({ body }) {
+	const { project, res } = body;
+	const detailingChecks = res.checks.filter((c) => c.category === "Durability");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Reinforcement Schedule",
+				hint: "Main bars per metre run of wall",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-3 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Inner face (back, base hogging)",
+							value: `Ø${project.innerFaceBarDiameter} @ ${project.innerFaceBarSpacing}`,
+							unit: "mm c/c",
+							sub: `As = ${res.innerAsProvided} mm²/m`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Outer face (front, span sagging)",
+							value: `Ø${project.outerFaceBarDiameter} @ ${project.outerFaceBarSpacing}`,
+							unit: "mm c/c",
+							sub: `As = ${res.outerAsProvided} mm²/m`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Base dowels / starter bars",
+							value: `Ø${project.baseDowelBarDiameter} @ ${project.baseDowelBarSpacing}`,
+							unit: "mm c/c"
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section$1, {
+				title: "Anchorage & Detailing",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-2 md:grid-cols-4 gap-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "l_bd required (dowels)",
+							value: `${res.baseDowelAnchorageRequired}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Available straight length",
+							value: `${res.baseDowelAnchorageAvailable}`,
+							unit: "mm",
+							tone: res.baseDowelAnchorageRequired > res.baseDowelAnchorageAvailable ? "rose" : "emerald"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Cover — inner (buried)",
+							value: `${project.cNomBuried}`,
+							unit: "mm"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard$1, {
+							label: "Cover — outer (water)",
+							value: `${project.cNomWater}`,
+							unit: "mm"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 font-mono text-[11px] text-slate-500",
+					children: "Simplified straight-length anchorage check for base dowels only. Curtailment of the inner-face hogging steel past the point of contraflexure is not automated — verify bar cut-off lengths separately (EN 1992-1-1 §9.2.1.3 / §8.4)."
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section$1, {
+				title: "Items Not Verified in This Module",
+				hint: "Explicitly flagged, never silently omitted (AGENTS.project.md §39)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable$1, { checks: detailingChecks })
+			})
+		]
+	});
+}
+function ReportTab$1({ body }) {
+	const { project, res } = body;
+	const row = (id, descr, demand, resistance) => {
+		const c = res.checks.find((x) => x.id === id);
+		const status = c?.status ?? "NOT VERIFIED";
+		const u = c?.utilization ?? 0;
+		const cls = status === "FAIL" ? "text-rose-700" : status === "WARNING" ? "text-amber-700" : status === "NOT VERIFIED" ? "text-slate-500" : "text-emerald-700";
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+			className: "border-b border-slate-200",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300",
+					children: descr
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: demand
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: resistance
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 border-r border-slate-300 text-right font-bold ${u > 1 ? "text-rose-700" : ""}`,
+					children: u.toFixed(2)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 font-bold ${cls}`,
+					children: status
+				})
+			]
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6 bg-white text-slate-900 p-8 rounded-2xl shadow-2xl font-serif print-area",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "border-b-2 border-slate-900 pb-4 flex justify-between items-start no-print",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "text-2xl font-bold tracking-wide",
+				children: "ENGINEERING CALCULATION SHEET"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "text-xs font-mono text-slate-600 mt-1",
+				children: [
+					project.projectName,
+					" — Basement Retaining Wall, Top-Propped (",
+					project.projectNumber,
+					")"
+				]
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				onClick: () => window.print(),
+				className: "flex items-center gap-1.5 rounded bg-slate-900 px-3 py-1.5 text-xs text-white",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "size-3.5" }), " Print PDF"]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "space-y-7 text-sm",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "1. Design Basis"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "list-none font-mono text-xs space-y-1",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Standards: EN 1990 · EN 1991-1-1 · EN 1992-1-1 (EC2) · EN 1997-1 (EC7)" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "National Annex: UK NA (provisional) · Design Approach 1 (DA1-C1: A1+M1+R1, DA1-C2: A2+M2+R1)" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Design working life: ",
+							project.designLife,
+							" y · Consequence class CC2 (assumed) — INPUT REQUIRED to confirm"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Exposure: ",
+							project.exposureClassBuried,
+							" (inner/buried) / ",
+							project.exposureClassWater,
+							" (outer/water) · w_max = ",
+							project.wMax,
+							" mm · c_nom = ",
+							project.cNomBuried,
+							" / ",
+							project.cNomWater,
+							" mm"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"Concrete ",
+							project.concreteGrade,
+							" (fck = ",
+							project.fck,
+							" MPa) · ",
+							project.steelGrade,
+							" (fyk = ",
+							project.fyk,
+							" MPa) · fcd = ",
+							res.fcd,
+							" ",
+							"MPa · fyd = ",
+							res.fyd,
+							" MPa · fctm = ",
+							res.fctm,
+							" MPa"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Status: PRELIMINARY — NOT VERIFIED until National Annex, geotechnical report, water table and waterproofing grade are project-confirmed." })
+					]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "2. Structural System & Load Path"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"H = ",
+							(project.stemHeight / 1e3).toFixed(2),
+							" m · t = ",
+							project.wallThickness,
+							" mm · base ",
+							project.baseThickness,
+							" mm · base support = ",
+							project.baseSupportType
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs mt-1",
+						children: "Construction stage: soil/surcharge pressure → free cantilever, fixed at base → base bending/shear (back face)."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs mt-1",
+						children: "Permanent stage: soil/water/surcharge pressure → propped cantilever (base fixed, top pinned) → base hogging (back face) + span sagging (front face) → top prop reaction → ground-floor slab/diaphragm; base reaction → base slab/footing."
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "3. Earth Pressure & Stage Forces"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"Construction: ",
+							res.construction.kLabel,
+							", k = ",
+							res.construction.kUsed,
+							" · Permanent: ",
+							res.permanent.kLabel,
+							", k = ",
+							res.permanent.kUsed
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs mt-1",
+						children: [
+							"Construction base: M_Ed = ",
+							res.construction.baseMEd,
+							" kNm/m, V_Ed = ",
+							res.construction.baseVEd,
+							" kN/m"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs mt-1",
+						children: [
+							"Permanent: prop reaction P = ",
+							res.permanent.propReaction,
+							" kN/m · base M_Ed = ",
+							res.permanent.baseMEd,
+							" kNm/m, V_Ed = ",
+							res.permanent.baseVEd,
+							" kN/m · span M_Ed = ",
+							res.permanent.spanMEd,
+							" kNm/m at ",
+							res.permanent.spanDepthFromTop,
+							" mm from top, V_Ed = ",
+							res.permanent.spanVEd,
+							" kN/m"
+						]
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "4. Structural Verification (EN 1992-1-1)"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full text-left font-mono text-xs border border-slate-300",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "bg-slate-100 border-b border-slate-300",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300",
+								children: "Check"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Demand"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Resistance"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "UR"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2",
+								children: "Status"
+							})
+						]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tbody", { children: [
+						row("UL-01", "Construction base flexure (inner)", `${res.checks.find((c) => c.id === "UL-01")?.demand ?? 0} mm²/m`, `${res.innerAsProvided} mm²/m`),
+						row("UL-02", "Construction base shear (inner)", `${res.construction.baseVEd} kN/m`, `${res.innerVRdc} kN/m`),
+						row("UL-03", "Permanent base flexure (inner)", `${res.checks.find((c) => c.id === "UL-03")?.demand ?? 0} mm²/m`, `${res.innerAsProvided} mm²/m`),
+						row("UL-04", "Permanent base shear (inner)", `${res.permanent.baseVEd} kN/m`, `${res.innerVRdc} kN/m`),
+						row("UL-05", "Permanent span flexure (outer)", `${res.checks.find((c) => c.id === "UL-05")?.demand ?? 0} mm²/m`, `${res.outerAsProvided} mm²/m`),
+						row("UL-06", "Permanent span shear (outer)", `${res.permanent.spanVEd} kN/m`, `${res.outerVRdc} kN/m`),
+						row("UL-07", "Min. reinforcement (inner)", `${res.innerAsMin} mm²/m`, `${res.innerAsProvided} mm²/m`),
+						row("UL-08", "Min. reinforcement (outer)", `${res.outerAsMin} mm²/m`, `${res.outerAsProvided} mm²/m`),
+						row("DT-09", "Base dowel anchorage", `${res.baseDowelAnchorageRequired} mm`, `${res.baseDowelAnchorageAvailable} mm`),
+						row("SL-13", "Crack width — inner (QP)", `${res.crackWidthInner} mm`, `${res.crackLimit} mm`),
+						row("SL-14", "Crack width — outer (QP)", `${res.crackWidthOuter} mm`, `${res.crackLimit} mm`)
+					] })]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "5. Load Path Outputs (Informational)"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full text-left font-mono text-xs border border-slate-300",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "bg-slate-100 border-b border-slate-300",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300",
+								children: "Output"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Value"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2",
+								children: "Feeds"
+							})
+						]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tbody", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "border-b border-slate-200",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "p-2 border-r border-slate-300",
+								children: "Top prop reaction P"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: [res.permanent.propReaction, " kN/m"]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "p-2",
+								children: "Ground-floor slab / diaphragm design (out of scope)"
+							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-2 border-r border-slate-300",
+							children: "Base reaction (M, V)"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-2 border-r border-slate-300 text-right",
+							children: [
+								res.baseMEdGov,
+								" kNm/m, ",
+								res.baseVEdGov,
+								" kN/m"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-2",
+							children: "Base slab / footing design (out of scope)"
+						})
+					] })] })]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "6. Design Limitations"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-mono text-xs",
+					children: "Global bearing/sliding/settlement of the raft, curtailment of hogging steel past the point of contraflexure, and waterproofing grade/detailing are NOT VERIFIED in this module — the building's overall foundation design, a project geotechnical report and specialist waterproofing design are required to close these out."
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "7. Conclusion"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+					"Maximum utilization ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "font-bold",
+						children: ["UR_max = ", res.utilizationMax]
+					}),
+					" (",
+					res.governingName,
+					"). Base design governed by the ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "font-bold",
+						children: res.baseGovStage
+					}),
+					" stage. Overall status:",
+					" ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: `font-bold ${res.overallStatus === "FAIL" ? "text-rose-700" : res.overallStatus === "WARNING" ? "text-amber-700" : "text-emerald-700"}`,
+						children: res.overallStatus
+					}),
+					". This AI-generated calculation is an engineering support document and shall not replace independent engineering judgement, checking, approval, or statutory responsibility."
+				] })] })
+			]
+		})]
+	});
+}
+var TABS$1 = [
+	{
+		id: "overview",
+		label: "1. Overview & HUD",
+		icon: Compass
+	},
+	{
+		id: "geometry",
+		label: "2. Geometry & Materials",
+		icon: Building2
+	},
+	{
+		id: "soil",
+		label: "3. Soil, Water & Earth Pressure",
+		icon: Mountain
+	},
+	{
+		id: "construction",
+		label: "4. Construction Stage",
+		icon: HardHat
+	},
+	{
+		id: "permanent",
+		label: "5. Permanent Stage",
+		icon: ShieldCheck
+	},
+	{
+		id: "detailing",
+		label: "6. Detailing & Rebar",
+		icon: Layers
+	},
+	{
+		id: "report",
+		label: "7. Calculation Report",
+		icon: FileText
+	}
+];
+function BasementWallView() {
+	const userEmail = useProject((s) => s.userEmail);
+	const logout = useProject((s) => s.logout);
+	const setActiveModule = useProject((s) => s.setActiveModule);
+	const [project, setProject] = (0, import_react.useState)(defaultBasementWallProject());
+	const [activeTab, setActiveTab] = (0, import_react.useState)("overview");
+	const pad = (patch) => setProject((prev) => ({
+		...prev,
+		...patch
+	}));
+	const res = (0, import_react.useMemo)(() => analyzeBasementWall(project), [project]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-[#07111f] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute inset-0 bg-[linear-gradient(to_right,#16263d_1px,transparent_1px),linear-gradient(to_bottom,#16263d_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-35 pointer-events-none" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "relative z-20 border-b border-[#1e3a5f]/60 bg-[#060e18]/95 backdrop-blur-md px-6 py-4 flex items-center justify-between",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveModule("modules"),
+							className: "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 font-mono text-xs transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, { className: "size-4" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Modules Dashboard" })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-5 w-px bg-slate-700 hidden sm:block" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "font-display text-sm sm:text-base font-bold tracking-wider text-white uppercase",
+							children: "BASEMENT RETAINING WALL — TOP-PROPPED"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-[11px] font-mono text-cyan-400",
+							children: "EN 1992-1-1 · EN 1997-1 DA1 · UK NA (provisional)"
+						})] })
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3 font-mono text-xs",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `size-2 rounded-full ${res.overallStatus === "FAIL" ? "bg-rose-500" : res.overallStatus === "WARNING" ? "bg-amber-400" : "bg-emerald-500"} animate-pulse` }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+								res.overallStatus,
+								" · UR ",
+								res.utilizationMax
+							] })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: userEmail || "str.design.test" })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: logout,
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/80 hover:border-rose-700/60 border border-slate-700 text-slate-300 hover:text-rose-300 transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogOut, { className: "size-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Logout" })]
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "relative z-15 bg-[#040910]/90 border-b border-[#1e3a5f]/80 px-6 flex overflow-x-auto gap-1 font-mono text-xs",
+				children: TABS$1.map((tab) => {
+					const Icon = tab.icon;
+					const isActive = activeTab === tab.id;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab(tab.id),
+						className: `flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition whitespace-nowrap ${isActive ? "border-cyan-400 text-cyan-300 bg-cyan-950/40" : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"}`,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { className: `size-4 ${isActive ? "text-cyan-400" : "text-slate-500"}` }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: tab.label })]
+					}, tab.id);
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "relative z-10 flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 flex flex-col",
+				children: [
+					activeTab === "overview" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OverviewTab$1, {
+						body: {
+							project,
+							res,
+							pad
+						},
+						setActiveTab
+					}),
+					activeTab === "geometry" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeometryTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "soil" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SoilTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "construction" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ConstructionStageTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "permanent" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PermanentStageTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "detailing" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailingTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "report" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReportTab$1, { body: {
+						project,
+						res,
+						pad
+					} })
+				]
+			})
+		]
+	});
+}
+var MESH_NODES = 41;
+var T_GUST = 600;
+var TERRAIN = {
+	"0": {
+		z0: .003,
+		zmin: 1
+	},
+	I: {
+		z0: .01,
+		zmin: 1
+	},
+	II: {
+		z0: .05,
+		zmin: 2
+	},
+	III: {
+		z0: .3,
+		zmin: 5
+	},
+	IV: {
+		z0: 1,
+		zmin: 10
+	}
+};
+var Z0_II = .05;
+var CF0_DB = [
+	.1,
+	.5,
+	1,
+	2,
+	4,
+	10
+];
+var CF0_VAL = [
+	2.35,
+	2.15,
+	2.05,
+	1.55,
+	1.25,
+	1.2
+];
+var LAMBDA_LB = [
+	1,
+	2,
+	5,
+	10,
+	50
+];
+var LAMBDA_VAL = [
+	2,
+	3.3,
+	7,
+	12,
+	25
+];
+var PSILAMBDA_LAMBDA = [
+	1,
+	5,
+	10,
+	50,
+	100
+];
+var PSILAMBDA_VAL = [
+	.62,
+	.72,
+	.8,
+	.92,
+	1
+];
+var KX_ZETA = [
+	0,
+	1,
+	1.5,
+	2
+];
+var KX_VAL = [
+	3.14,
+	1.5,
+	1.7,
+	2
+];
+function round(value, decimals = 2) {
+	return Math.round(value * 10 ** decimals) / 10 ** decimals;
+}
+function pos(x, fallback) {
+	return Number.isFinite(x) && x > 0 ? x : fallback;
+}
+function nonNeg(x, fallback) {
+	return Number.isFinite(x) && x >= 0 ? x : fallback;
+}
+function safeRatio(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return 1;
+	if (resistance <= 0) return demand > 0 ? 999 : 0;
+	return round(Math.abs(demand) / resistance, 3);
+}
+function passFail(demand, resistance) {
+	if (!Number.isFinite(demand) || !Number.isFinite(resistance)) return "NOT VERIFIED";
+	return Math.abs(demand) > resistance ? "FAIL" : "PASS";
+}
+/** Non-dimensional aerodynamic admittance function R(eta), Annex B.2 — R(eta)->1 as eta->0. */
+function admittance(eta) {
+	if (eta < 1e-6) return 1;
+	return 1 / eta - 1 / (2 * eta * eta) * (1 - Math.exp(-2 * eta));
+}
+function analyzeWindLoad(project) {
+	const checks = [];
+	const push = (id, name, category, demand, demandUnit, resistance, resistanceUnit, utilization, status, clause) => checks.push({
+		id,
+		name,
+		category,
+		demand,
+		demandUnit,
+		resistance,
+		resistanceUnit,
+		utilization,
+		status,
+		clause
+	});
+	const p = {
+		terrainCategory: project.terrainCategory in TERRAIN ? project.terrainCategory : "II",
+		siteAltitudeM: nonNeg(project.siteAltitudeM, 10),
+		vbMap: pos(project.vbMap, 24),
+		cDir: pos(project.cDir, 1),
+		cSeason: pos(project.cSeason, 1),
+		airDensity: pos(project.airDensity, 1.25),
+		turbulenceFactorKl: pos(project.turbulenceFactorKl, 1),
+		orographyCo: pos(project.orographyCo, 1),
+		buildingHeightM: pos(project.buildingHeightM, 100),
+		crosswindBreadthM: pos(project.crosswindBreadthM, 30),
+		alongwindDepthM: pos(project.alongwindDepthM, 20),
+		naturalFreqMode: project.naturalFreqMode === "given" ? "given" : "estimate",
+		naturalFreqHz: pos(project.naturalFreqHz, .46),
+		dampingLogDecrement: pos(project.dampingLogDecrement, .1),
+		massPerHeightTPerM: pos(project.massPerHeightTPerM, 230),
+		modeShapeExponent: nonNeg(project.modeShapeExponent, 1),
+		comfortAccelLimit: pos(project.comfortAccelLimit, .15),
+		driftLimitDenominator: pos(project.driftLimitDenominator, 500)
+	};
+	const h = p.buildingHeightM;
+	const b = p.crosswindBreadthM;
+	const d = p.alongwindDepthM;
+	const vb0 = (1 + .001 * p.siteAltitudeM) * p.vbMap;
+	const vb = p.cDir * p.cSeason * vb0;
+	const { z0, zmin } = TERRAIN[p.terrainCategory];
+	const kr = .19 * (z0 / Z0_II) ** .07;
+	const crOf = (z) => kr * Math.log(Math.max(z, zmin) / z0);
+	const IvOf = (z) => p.turbulenceFactorKl / (p.orographyCo * Math.log(Math.max(z, zmin) / z0));
+	const vmOf = (z) => crOf(z) * p.orographyCo * vb;
+	const qpOf = (z) => (1 + 7 * IvOf(z)) * .5 * p.airDensity * vmOf(z) ** 2 / 1e3;
+	const zeOf = (z) => {
+		if (h <= b) return h;
+		if (h <= 2 * b) return z <= h - b ? b : h;
+		if (z <= b) return b;
+		if (z >= h - b) return h;
+		return z;
+	};
+	const zArr = Array.from({ length: MESH_NODES }, (_, i) => h * i / 40);
+	const zeArr = zArr.map(zeOf);
+	const crArr = zArr.map(crOf);
+	const IvArr = zArr.map(IvOf);
+	const vmArr = zeArr.map(vmOf);
+	const qpArr = zeArr.map(qpOf);
+	const dOverB = d / b;
+	const cf0 = interp(CF0_DB, CF0_VAL, dOverB);
+	const psiR = 1;
+	const lOverB = h / b;
+	const lambda = interp(LAMBDA_LB, LAMBDA_VAL, lOverB);
+	const psiLambda = interp(PSILAMBDA_LAMBDA, PSILAMBDA_VAL, lambda);
+	const cf = cf0 * psiR * psiLambda;
+	const wArr = qpArr.map((qp) => cf * qp * b);
+	const zs = Math.max(.6 * h, zmin);
+	const vmZs = vmOf(zs);
+	const IvZs = IvOf(zs);
+	const alphaTL = .67 + .05 * Math.log(z0);
+	const Lzs = 300 * (zs / 200) ** alphaTL;
+	const B2 = 1 / (1 + .9 * ((b + h) / Lzs) ** .63);
+	const n1 = p.naturalFreqMode === "given" ? p.naturalFreqHz : 46 / h;
+	const fL = n1 * Lzs / Math.max(vmZs, 1e-6);
+	const SL = 6.8 * fL / (1 + 10.2 * fL) ** (5 / 3);
+	const etaH = 4.6 * h * fL / Lzs;
+	const etaB = 4.6 * b * fL / Lzs;
+	const Rh = admittance(etaH);
+	const Rb = admittance(etaB);
+	const R2 = Math.PI * Math.PI / (2 * p.dampingLogDecrement) * SL * Rh * Rb;
+	const nu = Math.max(n1 * Math.sqrt(R2 / Math.max(B2 + R2, 1e-9)), .08);
+	const lnNuT = Math.max(2 * Math.log(Math.max(nu * T_GUST, 1.001)), 1e-6);
+	const kp = Math.max(Math.sqrt(lnNuT) + .6 / Math.sqrt(lnNuT), 3);
+	const cscd = (1 + 2 * kp * IvZs * Math.sqrt(B2 + R2)) / (1 + 7 * IvZs);
+	const fwDistArr = wArr.map((w) => cscd * w);
+	const vBase = trap(fwDistArr, zArr);
+	const mOverturning = trapMoment(fwDistArr, zArr, 0);
+	const massPerHeightKgPerM = p.massPerHeightTPerM * 1e3;
+	const eiEff = massPerHeightKgPerM * h ** 4 * (2 * Math.PI * n1 / 1.875 ** 2) ** 2 / 1e3;
+	const n = zArr.length;
+	const V = new Array(n).fill(0);
+	const M = new Array(n).fill(0);
+	for (let i = n - 2; i >= 0; i--) {
+		const dz = zArr[i + 1] - zArr[i];
+		V[i] = V[i + 1] + .5 * (fwDistArr[i] + fwDistArr[i + 1]) * dz;
+		M[i] = M[i + 1] + .5 * (V[i] + V[i + 1]) * dz;
+	}
+	const kappa = M.map((m) => m / Math.max(eiEff, 1e-9));
+	const theta = new Array(n).fill(0);
+	const y = new Array(n).fill(0);
+	for (let i = 1; i < n; i++) {
+		const dz = zArr[i] - zArr[i - 1];
+		theta[i] = theta[i - 1] + .5 * (kappa[i - 1] + kappa[i]) * dz;
+		y[i] = y[i - 1] + .5 * (theta[i - 1] + theta[i]) * dz;
+	}
+	const tipDeflectionM = y[n - 1];
+	const driftLimitM = h / p.driftLimitDenominator;
+	const driftRatioDenominator = tipDeflectionM > 1e-9 ? h / tipDeflectionM : 999999;
+	const Kx = interp(KX_ZETA, KX_VAL, p.modeShapeExponent);
+	const R = Math.sqrt(Math.max(R2, 0));
+	const sigmaAccel = cf * p.airDensity * b * IvZs * vmZs ** 2 * (R / massPerHeightKgPerM) * Kx;
+	const peakAccel = kp * sigmaAccel;
+	push("AP-01", "Height applicability (H ≤ 200 m)", "Applicability", h, "m", 200, "m", safeRatio(h, 200), h <= 200 ? "PASS" : "WARNING", "EN 1991-1-4 §4.3.2 (simplified profile validity)");
+	const dbInRange = dOverB >= CF0_DB[0] && dOverB <= CF0_DB[CF0_DB.length - 1];
+	push("AP-02", "Force-coefficient chart range (d/b)", "Applicability", dOverB, "-", CF0_DB[CF0_DB.length - 1], "-", safeRatio(dOverB, CF0_DB[CF0_DB.length - 1]), dbInRange ? "PASS" : "NOT VERIFIED", "EN 1991-1-4 Fig 7.23 (digitized, extrapolated outside range)");
+	const lbInRange = lOverB >= LAMBDA_LB[0] && lOverB <= LAMBDA_LB[LAMBDA_LB.length - 1];
+	push("AP-03", "Effective slenderness chart range (l/b)", "Applicability", lOverB, "-", LAMBDA_LB[LAMBDA_LB.length - 1], "-", safeRatio(lOverB, LAMBDA_LB[LAMBDA_LB.length - 1]), lbInRange ? "PASS" : "NOT VERIFIED", "EN 1991-1-4 Table 7.16 / Fig 7.36 (digitized, extrapolated outside range)");
+	const cscdInBand = cscd >= .7 && cscd <= 1.3;
+	push("AP-04", "Structural factor cscd sanity range", "Applicability", cscd, "-", 1.3, "-", safeRatio(cscd, 1.3), cscdInBand ? "PASS" : "WARNING", "EN 1991-1-4 §6.3.1 (engineering sanity check, typical common-building range)");
+	push("ULS-05", "Base shear vs. lateral-system/foundation capacity", "Load Path", vBase, "kN", 0, "kN", 0, "NOT VERIFIED", "Out of scope — verify in the lateral-system / foundation module");
+	push("ULS-06", "Overturning moment vs. foundation/core overturning capacity", "Load Path", mOverturning, "kNm", 0, "kNm", 0, "NOT VERIFIED", "Out of scope — verify in the foundation module");
+	push("ULS-07", "Foundation bearing-pressure increment from overturning", "Load Path", mOverturning, "kNm", 0, "kPa", 0, "NOT VERIFIED", "Out of scope — verify in the Pile Cap / Bored Pile module");
+	push("SLS-08", "Along-wind tip drift", "SLS", tipDeflectionM, "m", driftLimitM, "m", safeRatio(tipDeflectionM, driftLimitM), passFail(tipDeflectionM, driftLimitM), `Engineering judgement — H/${p.driftLimitDenominator} assumed, not codified in EN 1990/EN 1993`);
+	push("SLS-09", "Occupant comfort — along-wind peak acceleration (Informative — ISO 10137, not a codified EN 1991-1-4 limit)", "SLS", peakAccel, "m/s²", p.comfortAccelLimit, "m/s²", safeRatio(peakAccel, p.comfortAccelLimit), passFail(peakAccel, p.comfortAccelLimit), "ISO 10137 (informative benchmark; a real check needs a reduced-return-period wind speed)");
+	const listing = [...checks].sort((a, b) => b.utilization - a.utilization);
+	const utilizationMax = listing.reduce((a, c) => Math.max(a, c.utilization), 0);
+	const failed = listing.find((c) => c.status === "FAIL");
+	let overallStatus = "PASS";
+	if (failed) overallStatus = "FAIL";
+	else if (listing.some((c) => c.status === "WARNING") || utilizationMax > .9) overallStatus = "WARNING";
+	return {
+		z0: round(z0, 4),
+		zmin: round(zmin, 2),
+		kr: round(kr, 4),
+		vb: round(vb, 2),
+		vb0: round(vb0, 2),
+		z: zArr.map((v) => round(v, 2)),
+		ze: zeArr.map((v) => round(v, 2)),
+		cr: crArr.map((v) => round(v, 4)),
+		Iv: IvArr.map((v) => round(v, 4)),
+		vm: vmArr.map((v) => round(v, 2)),
+		qp: qpArr.map((v) => round(v, 4)),
+		w: wArr.map((v) => round(v, 2)),
+		fwDist: fwDistArr.map((v) => round(v, 2)),
+		dOverB: round(dOverB, 3),
+		cf0: round(cf0, 3),
+		lOverB: round(lOverB, 3),
+		lambda: round(lambda, 2),
+		psiLambda: round(psiLambda, 3),
+		psiR: round(psiR, 3),
+		cf: round(cf, 3),
+		zs: round(zs, 2),
+		vmZs: round(vmZs, 2),
+		IvZs: round(IvZs, 4),
+		alphaTL: round(alphaTL, 4),
+		Lzs: round(Lzs, 2),
+		B2: round(B2, 4),
+		n1: round(n1, 4),
+		fL: round(fL, 4),
+		SL: round(SL, 5),
+		etaH: round(etaH, 4),
+		etaB: round(etaB, 4),
+		Rh: round(Rh, 4),
+		Rb: round(Rb, 4),
+		R2: round(R2, 4),
+		nu: round(nu, 4),
+		kp: round(kp, 3),
+		cscd: round(cscd, 3),
+		vBase: round(vBase, 1),
+		mOverturning: round(mOverturning, 1),
+		eiEff: round(eiEff, 0),
+		tipDeflectionM: round(tipDeflectionM, 4),
+		driftRatioDenominator: round(driftRatioDenominator, 0),
+		driftLimitM: round(driftLimitM, 4),
+		sigmaAccel: round(sigmaAccel, 4),
+		peakAccel: round(peakAccel, 4),
+		checks: listing,
+		utilizationMax: round(utilizationMax, 2),
+		governingName: listing[0]?.name ?? "—",
+		overallStatus
+	};
+}
+var defaultWindLoadProject = () => ({
+	projectName: "Demonstration Tall Building",
+	projectNumber: "WL-2026-TOWER",
+	client: "Development Client Ltd",
+	designer: "Lead Structural Engineer",
+	terrainCategory: "II",
+	siteAltitudeM: 10,
+	vbMap: 24,
+	cDir: 1,
+	cSeason: 1,
+	airDensity: 1.25,
+	turbulenceFactorKl: 1,
+	orographyCo: 1,
+	nationalAnnex: "UK NA (provisional)",
+	buildingHeightM: 100,
+	crosswindBreadthM: 30,
+	alongwindDepthM: 20,
+	naturalFreqMode: "estimate",
+	naturalFreqHz: .46,
+	dampingLogDecrement: .1,
+	massPerHeightTPerM: 230,
+	modeShapeExponent: 1,
+	comfortAccelLimit: .15,
+	driftLimitDenominator: 500
+});
+function StatusBadge({ status }) {
+	const cls = status === "PASS" ? "bg-emerald-950 border-emerald-600 text-emerald-400" : status === "WARNING" ? "bg-amber-950 border-amber-600 text-amber-300" : status === "FAIL" ? "bg-rose-950 border-rose-600 text-rose-400" : "bg-slate-800 border-slate-600 text-slate-300";
+	const icon = status === "PASS" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "size-3" }) : status === "WARNING" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TriangleAlert, { className: "size-3" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HardHat, { className: "size-3" });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+		className: `inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-mono ${cls}`,
+		children: [icon, status]
+	});
+}
+function StatCard({ label, value, unit, sub, tone = "cyan" }) {
+	const color = {
+		cyan: "text-cyan-300",
+		white: "text-white",
+		emerald: "text-emerald-400",
+		amber: "text-amber-400",
+		rose: "text-rose-400"
+	}[tone];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/90 border border-cyan-500/30 rounded-xl p-4",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400",
+				children: label
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: `text-2xl font-mono font-bold mt-1 ${color}`,
+				children: [
+					value,
+					" ",
+					unit && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-xs text-cyan-400",
+						children: unit
+					})
+				]
+			}),
+			sub && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-[11px] font-mono text-slate-500 mt-1",
+				children: sub
+			})
+		]
+	});
+}
+function NumField({ label, value, unit, onChange, min, max, step = 1 }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: [label, unit && ` (${unit})`]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+			type: "number",
+			value: Number.isFinite(value) ? value : 0,
+			min,
+			max,
+			step,
+			onChange: (e) => onChange(Number(e.target.value)),
+			className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
+		})]
+	});
+}
+function SelectField({ label, value, options, onChange }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: label
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("select", {
+			value,
+			onChange: (e) => onChange(e.target.value),
+			className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white",
+			children: options.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+				value: o.value,
+				children: o.label
+			}, o.value))
+		})]
+	});
+}
+function Field({ label, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "block",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mb-1 block text-[10px] uppercase tracking-wide text-slate-500",
+			children: label
+		}), children]
+	});
+}
+function Section({ title, hint, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "bg-[#081222]/95 border border-cyan-500/30 rounded-2xl p-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex items-center justify-between border-b border-cyan-900/60 pb-4 mb-6 gap-3 flex-wrap",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "font-display text-xl font-bold text-white",
+				children: title
+			}), hint && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-xs font-mono text-slate-400 mt-1",
+				children: hint
+			})] })
+		}), children]
+	});
+}
+function ChecksTable({ checks }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "overflow-x-auto",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+			className: "w-full text-left font-mono text-xs",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+				className: "border-b border-slate-700 text-cyan-400 bg-cyan-950/30",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Check"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Demand"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "Resistance"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3 text-right",
+						children: "UR"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Status"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "p-3",
+						children: "Clause"
+					})
+				]
+			}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", {
+				className: "divide-y divide-slate-800",
+				children: checks.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+					className: "hover:bg-slate-900/50",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "rounded bg-cyan-950 px-1.5 py-0.5 text-[10px] text-cyan-300",
+									children: c.id
+								}),
+								" ",
+								c.name
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.demand.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.demandUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+							className: "p-3 text-right text-slate-200",
+							children: [
+								c.resistance.toFixed(2),
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-slate-500",
+									children: c.resistanceUnit
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: `p-3 text-right font-bold ${c.utilization > 1 ? "text-rose-400" : c.utilization > .9 ? "text-amber-400" : "text-emerald-400"}`,
+							children: c.utilization.toFixed(2)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, { status: c.status })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "p-3 text-slate-500",
+							children: c.clause
+						})
+					]
+				}, c.id))
+			})]
+		})
+	});
+}
+function Eq({ children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "rounded-lg bg-[#03070e] border border-cyan-900/60 p-3 font-mono text-xs text-cyan-100 overflow-x-auto",
+		children
+	});
+}
+var MONO = "JetBrains Mono, monospace";
+/** Building elevation schematic with a wind-pressure arrow envelope, in the same hand-drawn-SVG style as the other modules' diagrams. */
+function WindElevationSchematic({ project, result }) {
+	const W = 780;
+	const H = 460;
+	const padTop = 30;
+	const h = project.buildingHeightM;
+	const b = project.crosswindBreadthM;
+	const scaleY = 390 / h;
+	const buildingWidthPx = 130;
+	const baseY = 420;
+	const roofY = padTop;
+	const bldgX0 = 150;
+	const arrowScale = 70 / Math.max(1, ...result.fwDist);
+	const sampleIdx = Array.from({ length: 9 }, (_, i) => Math.round(i * (result.z.length - 1) / 8));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+		viewBox: `0 0 ${W} ${H}`,
+		className: "w-full h-auto max-w-full",
+		role: "img",
+		"aria-label": "Tall building elevation with wind pressure envelope",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("marker", {
+				id: "wlArrow",
+				markerWidth: "8",
+				markerHeight: "8",
+				refX: "6",
+				refY: "3",
+				orient: "auto",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+					d: "M0,0 L6,3 L0,6 Z",
+					fill: "#f59e0b"
+				})
+			}) }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+				x1: 0,
+				y1: baseY,
+				x2: W,
+				y2: baseY,
+				stroke: "#334155",
+				strokeWidth: "1.5"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+				x: bldgX0,
+				y: roofY,
+				width: buildingWidthPx,
+				height: 390,
+				fill: "rgba(6,182,212,0.12)",
+				stroke: "#38bdf8",
+				strokeWidth: "2"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 215,
+				y: 20,
+				textAnchor: "middle",
+				fill: "#cbd5e1",
+				fontSize: "11",
+				fontFamily: MONO,
+				children: [
+					"H = ",
+					h.toFixed(0),
+					" m"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 215,
+				y: 442,
+				textAnchor: "middle",
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: [
+					"B = ",
+					b.toFixed(0),
+					" m"
+				]
+			}),
+			sampleIdx.map((idx) => {
+				const z = result.z[idx];
+				const fw = result.fwDist[idx];
+				const y = baseY - z * scaleY;
+				const len = Math.max(6, fw * arrowScale);
+				return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("g", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", {
+					x1: bldgX0 - len - 6,
+					y1: y,
+					x2: 144,
+					y2: y,
+					stroke: "#f59e0b",
+					strokeWidth: "2",
+					markerEnd: "url(#wlArrow)"
+				}) }, idx);
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+				x: 76,
+				y: 20,
+				textAnchor: "middle",
+				fill: "#f59e0b",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: "Fw(z)"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 300,
+				y: 44,
+				fill: "#38bdf8",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: [
+					"qp(H) = ",
+					result.qp[result.qp.length - 1].toFixed(2),
+					" kPa"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 300,
+				y: 60,
+				fill: "#38bdf8",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: ["cscd = ", result.cscd]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 300,
+				y: 76,
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: [
+					"V_base = ",
+					result.vBase.toFixed(0),
+					" kN"
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+				x: 300,
+				y: 92,
+				fill: "#94a3b8",
+				fontSize: "10",
+				fontFamily: MONO,
+				children: [
+					"M0 = ",
+					result.mOverturning.toFixed(0),
+					" kNm"
+				]
+			})
+		]
+	});
+}
+/** Height-wise profile chart — quasi-static vs. design (cscd-amplified) wind force per unit height. */
+function WindForceProfileChart({ result }) {
+	const data = result.z.map((z, i) => ({
+		z,
+		w: result.w[i],
+		fwDist: result.fwDist[i]
+	}));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "h-80 w-full bg-[#03070e] border border-cyan-900/60 rounded-lg p-2",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, {
+			width: "100%",
+			height: "100%",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(LineChart, {
+				data,
+				margin: {
+					top: 10,
+					right: 20,
+					bottom: 10,
+					left: 0
+				},
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, {
+						stroke: "#1e293b",
+						strokeDasharray: "3 3"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(XAxis, {
+						dataKey: "z",
+						tick: {
+							fill: "#94a3b8",
+							fontSize: 11
+						},
+						label: {
+							value: "Height z (m)",
+							position: "insideBottom",
+							offset: -5,
+							fill: "#64748b",
+							fontSize: 11
+						}
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(YAxis, {
+						tick: {
+							fill: "#94a3b8",
+							fontSize: 11
+						},
+						label: {
+							value: "kN/m",
+							angle: -90,
+							position: "insideLeft",
+							fill: "#64748b",
+							fontSize: 11
+						}
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tooltip, {
+						contentStyle: {
+							background: "#0b192c",
+							border: "1px solid #164e63",
+							fontSize: 12
+						},
+						labelStyle: { color: "#94a3b8" }
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Legend, { wrapperStyle: { fontSize: 12 } }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line, {
+						type: "monotone",
+						dataKey: "w",
+						name: "w(z) quasi-static",
+						stroke: "#f59e0b",
+						dot: false,
+						strokeWidth: 2
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line, {
+						type: "monotone",
+						dataKey: "fwDist",
+						name: "Fw,dist(z) design (× cscd)",
+						stroke: "#22d3ee",
+						dot: false,
+						strokeWidth: 2
+					})
+				]
+			})
+		})
+	});
+}
+/** Height-wise profile chart — peak velocity pressure qp(z). */
+function WindPressureProfileChart({ result }) {
+	const data = result.z.map((z, i) => ({
+		z,
+		qp: result.qp[i],
+		vm: result.vm[i]
+	}));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "h-80 w-full bg-[#03070e] border border-cyan-900/60 rounded-lg p-2",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, {
+			width: "100%",
+			height: "100%",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(LineChart, {
+				data,
+				margin: {
+					top: 10,
+					right: 20,
+					bottom: 10,
+					left: 0
+				},
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, {
+						stroke: "#1e293b",
+						strokeDasharray: "3 3"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(XAxis, {
+						dataKey: "z",
+						tick: {
+							fill: "#94a3b8",
+							fontSize: 11
+						},
+						label: {
+							value: "Height z (m)",
+							position: "insideBottom",
+							offset: -5,
+							fill: "#64748b",
+							fontSize: 11
+						}
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(YAxis, {
+						tick: {
+							fill: "#94a3b8",
+							fontSize: 11
+						},
+						label: {
+							value: "qp (kPa)",
+							angle: -90,
+							position: "insideLeft",
+							fill: "#64748b",
+							fontSize: 11
+						}
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tooltip, {
+						contentStyle: {
+							background: "#0b192c",
+							border: "1px solid #164e63",
+							fontSize: 12
+						},
+						labelStyle: { color: "#94a3b8" }
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Legend, { wrapperStyle: { fontSize: 12 } }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Line, {
+						type: "monotone",
+						dataKey: "qp",
+						name: "qp(z) peak velocity pressure",
+						stroke: "#38bdf8",
+						dot: false,
+						strokeWidth: 2
+					})
+				]
+			})
+		})
+	});
+}
+function OverviewTab({ body, setActiveTab }) {
+	const { project, res } = body;
+	const governing = res.checks[0];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "Elevation & Governing State",
+				hint: "Along-wind design force profile Fw,dist(z) = cscd · cf · qp(ze) · b",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-6 lg:grid-cols-[2fr_1fr]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "bg-[#03070e] border border-slate-800 rounded-xl p-3",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WindElevationSchematic, {
+							project,
+							result: res
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "space-y-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+								label: "Overall status",
+								value: res.overallStatus,
+								sub: `UR_max = ${res.utilizationMax}`,
+								tone: res.overallStatus === "FAIL" ? "rose" : res.overallStatus === "WARNING" ? "amber" : "emerald"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+								label: "Governing check",
+								value: governing?.id ?? "—",
+								sub: governing?.name ?? "—",
+								tone: "white"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+								label: "Basic wind velocity vb",
+								value: `${res.vb}`,
+								unit: "m/s",
+								sub: `Terrain ${project.terrainCategory} · ${project.nationalAnnex}`
+							})
+						]
+					})]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Peak velocity pressure qp(H)",
+						value: `${res.qp[res.qp.length - 1]}`,
+						unit: "kPa",
+						sub: `vm(H) = ${res.vm[res.vm.length - 1]} m/s`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Structural factor cscd",
+						value: `${res.cscd}`,
+						sub: `n1 = ${res.n1} Hz · kp = ${res.kp}`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Base shear",
+						value: `${res.vBase.toFixed(0)}`,
+						unit: "kN",
+						sub: `M0 = ${res.mOverturning.toFixed(0)} kNm`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Peak acceleration",
+						value: `${res.peakAccel}`,
+						unit: "m/s²",
+						sub: `limit ${project.comfortAccelLimit} m/s² (informative)`
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Design Check Matrix",
+				hint: "Applicability / Load Path / SLS checks, most critical first",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: res.checks }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 flex flex-wrap gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab("wind-force"),
+						className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+						children: ["Wind force detail ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						onClick: () => setActiveTab("report"),
+						className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-800 text-xs font-mono text-slate-200",
+						children: ["Calculation report ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "size-3.5" })]
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-center gap-2 text-xs font-mono text-slate-500",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatusBadge, { status: res.overallStatus }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "This AI-generated calculation is an engineering support document and does not replace independent checking and approval." })]
+			})
+		]
+	});
+}
+function SiteTerrainTab({ body }) {
+	const { project, res, pad } = body;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Basic Wind Velocity",
+			hint: "EN 1991-1-4 §4.2 — all National Determined Parameters (NDPs), confirm against the governing National Annex",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Basic wind velocity vb,map (NA map)",
+						value: project.vbMap,
+						unit: "m/s",
+						onChange: (v) => pad({ vbMap: v }),
+						step: .5
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Site altitude A",
+						value: project.siteAltitudeM,
+						unit: "m AMSL",
+						onChange: (v) => pad({ siteAltitudeM: v }),
+						step: 5
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Directional factor cdir",
+						value: project.cDir,
+						onChange: (v) => pad({ cDir: v }),
+						step: .05
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Season factor cseason",
+						value: project.cSeason,
+						onChange: (v) => pad({ cSeason: v }),
+						step: .05
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Air density ρ",
+						value: project.airDensity,
+						unit: "kg/m³",
+						onChange: (v) => pad({ airDensity: v }),
+						step: .01
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "National Annex",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "text",
+							value: project.nationalAnnex,
+							onChange: (e) => pad({ nationalAnnex: e.target.value }),
+							className: "w-full rounded border border-slate-700 bg-[#040910] px-2 py-1.5 text-white"
+						})
+					})
+				]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-4",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"calt = 1 + 0.001·A = ",
+						(1 + .001 * project.siteAltitudeM).toFixed(4),
+						" (simplified/PROVISIONAL altitude correction)"
+					] }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-1",
+						children: [
+							"vb,0 = calt·vb,map = ",
+							res.vb0,
+							" m/s"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-1",
+						children: [
+							"vb = cdir·cseason·vb,0 = ",
+							res.vb,
+							" m/s"
+						]
+					})
+				] })
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Terrain Roughness & Orography",
+			hint: "EN 1991-1-4 §4.3, Table 4.1 (recommended values)",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectField, {
+							label: "Terrain category",
+							value: project.terrainCategory,
+							onChange: (v) => pad({ terrainCategory: v }),
+							options: [
+								{
+									value: "0",
+									label: "0 — Sea, coastal area exposed to open sea"
+								},
+								{
+									value: "I",
+									label: "I — Lakes/flat, negligible vegetation"
+								},
+								{
+									value: "II",
+									label: "II — Low vegetation, isolated obstacles"
+								},
+								{
+									value: "III",
+									label: "III — Regular cover of vegetation/buildings"
+								},
+								{
+									value: "IV",
+									label: "IV — Dense urban / at least 15% covered by buildings > 15 m"
+								}
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							label: "Turbulence factor kl",
+							value: project.turbulenceFactorKl,
+							onChange: (v) => pad({ turbulenceFactorKl: v }),
+							step: .05
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							label: "Orography co(z) override",
+							value: project.orographyCo,
+							onChange: (v) => pad({ orographyCo: v }),
+							step: .05
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Roughness length z0",
+						value: `${res.z0}`,
+						unit: "m",
+						sub: `zmin = ${res.zmin} m`
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Terrain factor kr",
+						value: `${res.kr}`,
+						sub: "kr = 0.19·(z0/z0,II)^0.07"
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: "Orography Annex A.3 procedure not digitized — co(z) is applied as a flat single-value override (ASSUMED, default 1.0)." }) })
+				})
+			]
+		})]
+	});
+}
+function GeometryDynamicsTab({ body }) {
+	const { project, res, pad } = body;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Building Geometry",
+				hint: "Rectangular plan, prismatic (constant cross-section over height) — wind normal to the B face",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							label: "Building height H",
+							value: project.buildingHeightM,
+							unit: "m",
+							onChange: (v) => pad({ buildingHeightM: v }),
+							step: 5
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							label: "Crosswind breadth B",
+							value: project.crosswindBreadthM,
+							unit: "m",
+							onChange: (v) => pad({ crosswindBreadthM: v }),
+							step: 1
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+							label: "Along-wind depth D",
+							value: project.alongwindDepthM,
+							unit: "m",
+							onChange: (v) => pad({ alongwindDepthM: v }),
+							step: 1
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 sm:grid-cols-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "d/b ratio",
+							value: `${res.dOverB}`,
+							sub: "drives cf,0 (Fig 7.23)"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "l/b ratio",
+							value: `${res.lOverB}`,
+							sub: "drives effective slenderness λ"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "H ≤ 2B?",
+							value: project.buildingHeightM <= 2 * project.crosswindBreadthM ? "Yes" : "No",
+							sub: "governs the ze(z) strip logic, Fig 7.4"
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Dynamic Properties",
+				hint: "EN 1991-1-4 Annex B / Annex F — needed for the structural factor cscd and comfort response",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectField, {
+								label: "Natural frequency mode",
+								value: project.naturalFreqMode,
+								onChange: (v) => pad({ naturalFreqMode: v }),
+								options: [{
+									value: "estimate",
+									label: "Estimate (Annex F, n1 = 46/h)"
+								}, {
+									value: "given",
+									label: "Given (from a modal-analysis model)"
+								}]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+								label: "Natural frequency n1 (if given)",
+								value: project.naturalFreqHz,
+								unit: "Hz",
+								onChange: (v) => pad({ naturalFreqHz: v }),
+								step: .01
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+								label: "Log. decrement of damping δs",
+								value: project.dampingLogDecrement,
+								onChange: (v) => pad({ dampingLogDecrement: v }),
+								step: .01
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+								label: "Mass per unit height m",
+								value: project.massPerHeightTPerM,
+								unit: "t/m",
+								onChange: (v) => pad({ massPerHeightTPerM: v }),
+								step: 5
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+								label: "Mode-shape exponent ζ",
+								value: project.modeShapeExponent,
+								onChange: (v) => pad({ modeShapeExponent: v }),
+								step: .1
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-4",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							"n1 (estimate) = 46/H = ",
+							(46 / Math.max(1, project.buildingHeightM)).toFixed(3),
+							" Hz — used when mode = \"Estimate\""
+						] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"n1 (in use) = ",
+								res.n1,
+								" Hz"
+							]
+						})] })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-4",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-amber-300",
+							children: "Aerodynamic damping (δa, Annex F.5) is NOT modelled — conservative for a stiffness-dominated concrete core; a slender steel tower should have this refinement added separately."
+						}) })
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "Serviceability Limits",
+				hint: "Not codified in EN 1990/EN 1993/EN 1991-1-4 — engineering-judgement placeholders, confirm with the client/project brief",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Drift limit denominator (H / n)",
+						value: project.driftLimitDenominator,
+						onChange: (v) => pad({ driftLimitDenominator: v }),
+						step: 50
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumField, {
+						label: "Comfort peak-acceleration limit",
+						value: project.comfortAccelLimit,
+						unit: "m/s²",
+						onChange: (v) => pad({ comfortAccelLimit: v }),
+						step: .01
+					})]
+				})
+			})
+		]
+	});
+}
+function PressureProfileTab({ body }) {
+	const { res } = body;
+	const n = res.z.length;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "Peak Velocity Pressure Profile qp(z)",
+				hint: "EN 1991-1-4 §4.5 — qp(z) = [1+7·Iv(z)]·0.5·ρ·vm(z)², evaluated at the reference height ze(z)",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WindPressureProfileChart, { result: res })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Profile at Roof Level (z = H)",
+				hint: "Illustrative substitution at the top of the height mesh",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "ze(H)",
+							value: `${res.ze[n - 1]}`,
+							unit: "m"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "cr(H)",
+							value: `${res.cr[n - 1]}`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "Iv(H)",
+							value: `${res.Iv[n - 1]}`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "vm(H)",
+							value: `${res.vm[n - 1]}`,
+							unit: "m/s"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							"cr(H) = kr·ln(ze/z0) = ",
+							res.kr,
+							"·ln(",
+							res.ze[n - 1],
+							"/",
+							res.z0,
+							") = ",
+							res.cr[n - 1]
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"vm(H) = cr(H)·co·vb = ",
+								res.cr[n - 1],
+								"·co·",
+								res.vb,
+								" = ",
+								res.vm[n - 1],
+								" m/s"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: ["Iv(H) = kl/(co·ln(ze/z0)) = ", res.Iv[n - 1]]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"qp(H) = [1+7·",
+								res.Iv[n - 1],
+								"]·0.5·ρ·",
+								res.vm[n - 1],
+								"² = ",
+								res.qp[n - 1],
+								" kPa"
+							]
+						})
+					] })
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "Reference Height ze(z) — Fig 7.4 Strip Logic",
+				hint: "Evaluated pointwise on the height mesh, not as discrete bands",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "list-disc list-inside space-y-1 font-mono text-xs text-slate-400",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "H ≤ B: ze(z) = H for the full height (single part)." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "B < H ≤ 2B: ze(z) = B below H−B, ze(z) = H above (two parts)." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "H > 2B: ze(z) = B below B, ze(z) = H above H−B, ze(z) = z (actual local height) in between." })
+					]
+				})
+			})
+		]
+	});
+}
+function ForceCoefficientsTab({ body }) {
+	const { res } = body;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Force Coefficient cf",
+			hint: "EN 1991-1-4 §7.6, Fig 7.23 (digitized), Table 7.16 / Fig 7.36 for end effects",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "d/b",
+						value: `${res.dOverB}`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "cf,0",
+						value: `${res.cf0}`,
+						sub: "digitized from Fig 7.23"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "ψλ",
+						value: `${res.psiLambda}`,
+						sub: `λ = ${res.lambda} (l/b = ${res.lOverB})`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "cf",
+						value: `${res.cf}`,
+						sub: "cf = cf,0·ψr·ψλ"
+					})
+				]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-4",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					"ψr = ",
+					res.psiR,
+					" (sharp corners assumed — scope-bounding simplification)"
+				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-1",
+					children: [
+						"cf = ",
+						res.cf0,
+						" × ",
+						res.psiR,
+						" × ",
+						res.psiLambda,
+						" = ",
+						res.cf
+					]
+				})] })
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+			title: "Structural Factor cscd — Annex B Closed-Form",
+			hint: "Background factor B² (B.2) + resonant factor R² (B.3), no iteration required",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "zs",
+							value: `${res.zs}`,
+							unit: "m",
+							sub: "max(0.6H, zmin)"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "L(zs)",
+							value: `${res.Lzs}`,
+							unit: "m",
+							sub: `α = ${res.alphaTL}`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "B²",
+							value: `${res.B2}`,
+							sub: "background factor"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "R²",
+							value: `${res.R2}`,
+							sub: "resonant factor"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 grid gap-3 lg:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							"n1 = ",
+							res.n1,
+							" Hz · fL = n1·L(zs)/vm(zs) = ",
+							res.fL
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: ["SL = 6.8·fL/(1+10.2·fL)^(5/3) = ", res.SL]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"ηh = ",
+								res.etaH,
+								" → Rh = ",
+								res.Rh,
+								" · ηb = ",
+								res.etaB,
+								" → Rb = ",
+								res.Rb
+							]
+						})
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: ["R² = (π²/2δs)·SL·Rh·Rb = ", res.R2] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"ν = max(n1·√(R²/(B²+R²)), 0.08) = ",
+								res.nu,
+								" Hz"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: ["kp = max(√(2ln(νT))+0.6/√(2ln(νT)), 3.0) = ", res.kp]
+						})
+					] })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eq, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: ["cscd = (1+2kp·Iv(zs)·√(B²+R²)) / (1+7·Iv(zs)) = ", res.cscd] }) })
+				})
+			]
+		})]
+	});
+}
+function WindForceTab({ body }) {
+	const { res } = body;
+	const loadPathChecks = res.checks.filter((c) => c.category === "Load Path");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "Design Wind Force Profile",
+				hint: "Fw,dist(z) = cscd · cf · qp(ze(z)) · b, EN 1991-1-4 §5.3",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WindForceProfileChart, { result: res })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Base Shear & Overturning Moment",
+				hint: "Integrated with the shared trap()/trapMoment() helpers over the height mesh",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Base shear V_base",
+						value: `${res.vBase.toFixed(0)}`,
+						unit: "kN",
+						sub: "∫ Fw,dist(z) dz"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Overturning moment M0",
+						value: `${res.mOverturning.toFixed(0)}`,
+						unit: "kNm",
+						sub: "∫ Fw,dist(z)·z dz, about foundation level"
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"V_base = trap(Fw,dist, z) = ",
+						res.vBase.toFixed(1),
+						" kN"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-1",
+						children: [
+							"M0 = trapMoment(Fw,dist, z, 0) = ",
+							res.mOverturning.toFixed(1),
+							" kNm"
+						]
+					})] })
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Load Path — Delegated Checks",
+				hint: "This is a loads module: resistance-side verification is delegated to downstream modules and is always NOT VERIFIED here",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: loadPathChecks }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 font-mono text-xs text-slate-500",
+					children: "Load path: wind → façade → floor diaphragm → core/frame → foundation → ground. Base shear and overturning moment feed the lateral-system, core, and foundation (Pile Cap / Bored Pile) modules."
+				})]
+			})
+		]
+	});
+}
+function DynamicResponseTab({ body }) {
+	const { res } = body;
+	const slsChecks = res.checks.filter((c) => c.category === "SLS");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Along-Wind Tip Deflection",
+				hint: "Cantilever equilibrium integration of Fw,dist(z) using an EI derived from n1 and the assumed uniform mass per unit height",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "EI (effective)",
+							value: `${res.eiEff.toLocaleString()}`,
+							unit: "kN.m²",
+							sub: "from n1 + uniform mass/height"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "Tip deflection",
+							value: `${res.tipDeflectionM}`,
+							unit: "m",
+							sub: `≈ H/${res.driftRatioDenominator}`
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+							label: "Drift limit",
+							value: `${res.driftLimitM}`,
+							unit: "m",
+							sub: "engineering-judgement placeholder"
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						"EI_eff = m·h⁴·(2π·n1/1.875²)² = ",
+						res.eiEff.toLocaleString(),
+						" kN.m²"
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-1",
+						children: [
+							"κ(z) = M(z)/EI_eff, integrated twice (trapezoidal quadrature) from the fixed base → δ_tip = ",
+							res.tipDeflectionM,
+							" m"
+						]
+					})] })
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+				title: "Occupant Comfort — Along-Wind Acceleration",
+				hint: "EN 1991-1-4 Annex B.4 (closed-form) — benchmarked against ISO 10137, not a codified Eurocode limit",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid gap-4 sm:grid-cols-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "RMS acceleration σa",
+						value: `${res.sigmaAccel}`,
+						unit: "m/s²"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatCard, {
+						label: "Peak acceleration â = kp·σa",
+						value: `${res.peakAccel}`,
+						unit: "m/s²",
+						tone: res.peakAccel > 0 ? "amber" : "emerald"
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Eq, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							"σa(H) = cf·ρ·b·Iv(zs)·vm(zs)²·(R/m1e)·Kx = ",
+							res.sigmaAccel,
+							" m/s²"
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1",
+							children: [
+								"â(H) = kp·σa = ",
+								res.kp,
+								"×",
+								res.sigmaAccel,
+								" = ",
+								res.peakAccel,
+								" m/s²"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-2 text-amber-300",
+							children: "Caveat: a real comfort assessment uses a reduced-return-period (typically 1-year) wind speed, not the 50-year ULS vb reused here. This is flagged INPUT REQUIRED and the check below is labelled informative accordingly."
+						})
+					] })
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+				title: "SLS Checks",
+				hint: "Along-wind drift and comfort — both engineering-judgement / informative benchmarks, not codified ULS/SLS Eurocode limits",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChecksTable, { checks: slsChecks })
+			})
+		]
+	});
+}
+function ReportTab({ body }) {
+	const { project, res } = body;
+	const n = res.z.length;
+	const row = (id, descr, demand, resistance) => {
+		const c = res.checks.find((x) => x.id === id);
+		const status = c?.status ?? "NOT VERIFIED";
+		const u = c?.utilization ?? 0;
+		const cls = status === "FAIL" ? "text-rose-700" : status === "WARNING" ? "text-amber-700" : status === "NOT VERIFIED" ? "text-slate-500" : "text-emerald-700";
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+			className: "border-b border-slate-200",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300",
+					children: descr
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: demand
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: "p-2 border-r border-slate-300 text-right",
+					children: resistance
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 border-r border-slate-300 text-right font-bold ${u > 1 ? "text-rose-700" : ""}`,
+					children: u.toFixed(2)
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+					className: `p-2 font-bold ${cls}`,
+					children: status
+				})
+			]
+		});
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6 bg-white text-slate-900 p-8 rounded-2xl shadow-2xl font-serif print-area",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "border-b-2 border-slate-900 pb-4 flex justify-between items-start no-print",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "text-2xl font-bold tracking-wide",
+				children: "ENGINEERING CALCULATION SHEET"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "text-xs font-mono text-slate-600 mt-1",
+				children: [
+					project.projectName,
+					" — Wind Load on a Tall Building (",
+					project.projectNumber,
+					")"
+				]
+			})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				onClick: () => window.print(),
+				className: "flex items-center gap-1.5 rounded bg-slate-900 px-3 py-1.5 text-xs text-white",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "size-3.5" }), " Print PDF"]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "space-y-7 text-sm",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "1. Design Basis"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "list-none font-mono text-xs space-y-1",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Standards: EN 1990 · EN 1991-1-4 (wind actions) · Annex B (structural factor, detailed) · Annex F (frequency/damping)" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+							"National Annex: ",
+							project.nationalAnnex,
+							" · Terrain category ",
+							project.terrainCategory
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "Status: PRELIMINARY — NOT VERIFIED until site wind data / NA / geometry inputs are project-confirmed." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: "This is a loads module: outputs feed downstream lateral-system / foundation modules and do not include a resistance-side verification." })
+					]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "2. Geometry & Load Path"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"H = ",
+							project.buildingHeightM,
+							" m · B (crosswind) = ",
+							project.crosswindBreadthM,
+							" m · D (along-wind) = ",
+							project.alongwindDepthM,
+							" m"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs mt-1",
+						children: "Load path: wind → façade → floor diaphragm → core/frame → foundation → ground. This module derives the along-wind façade action; downstream modules carry it through the diaphragm, core/frame, and foundation."
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+						children: "3. Wind Actions"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs",
+						children: [
+							"vb = ",
+							res.vb,
+							" m/s (vb,0 = ",
+							res.vb0,
+							" m/s) · z0 = ",
+							res.z0,
+							" m · zmin = ",
+							res.zmin,
+							" m · kr = ",
+							res.kr
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs mt-1",
+						children: [
+							"At z = H: qp(H) = ",
+							res.qp[n - 1],
+							" kPa · vm(H) = ",
+							res.vm[n - 1],
+							" m/s · Iv(H) = ",
+							res.Iv[n - 1]
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs mt-1",
+						children: [
+							"cf = ",
+							res.cf,
+							" (cf,0 = ",
+							res.cf0,
+							", ψλ = ",
+							res.psiLambda,
+							") · cscd = ",
+							res.cscd,
+							" (Annex B: B² = ",
+							res.B2,
+							", R² = ",
+							res.R2,
+							", kp = ",
+							res.kp,
+							", n1 = ",
+							res.n1,
+							" Hz)"
+						]
+					})
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "4. Resultants & Dynamic Response"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full text-left font-mono text-xs border border-slate-300",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: "bg-slate-100 border-b border-slate-300",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300",
+								children: "Check"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Demand"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "Resistance"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2 border-r border-slate-300 text-right",
+								children: "UR"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "p-2",
+								children: "Status"
+							})
+						]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tbody", { children: [
+						row("AP-01", "Height applicability", `${project.buildingHeightM} m`, "200 m"),
+						row("AP-04", "cscd sanity range", `${res.cscd}`, "1.30"),
+						row("ULS-05", "Base shear (informational)", `${res.vBase.toFixed(0)} kN`, "—"),
+						row("ULS-06", "Overturning moment (informational)", `${res.mOverturning.toFixed(0)} kNm`, "—"),
+						row("SLS-08", "Along-wind tip drift", `${res.tipDeflectionM} m`, `${res.driftLimitM} m`),
+						row("SLS-09", "Comfort peak acceleration (informative)", `${res.peakAccel} m/s²`, `${project.comfortAccelLimit} m/s²`)
+					] })]
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "5. Design Limitations"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-mono text-xs",
+					children: "Across-wind (vortex-shedding) response, torsional response, and interference/channelling effects are NOT VERIFIED in this module. Aerodynamic damping (Annex F.5) is not modelled. Base shear, overturning moment, and the bearing-pressure increment are informational only — resistance-side verification is delegated to the lateral-system and foundation modules (Pile Cap / Bored Pile). Comfort acceleration reuses the 50-year ULS wind speed rather than a reduced (typically 1-year) return-period speed — flagged INPUT REQUIRED."
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "font-bold border-b border-slate-300 pb-1 mb-2 text-base",
+					children: "6. Conclusion"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [
+					"Maximum utilization ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "font-bold",
+						children: ["UR_max = ", res.utilizationMax]
+					}),
+					" (",
+					res.governingName,
+					"). Overall status:",
+					" ",
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: `font-bold ${res.overallStatus === "FAIL" ? "text-rose-700" : res.overallStatus === "WARNING" ? "text-amber-700" : "text-emerald-700"}`,
+						children: res.overallStatus
+					}),
+					". This AI-generated calculation is an engineering support document and shall not replace independent engineering judgement, checking, approval, or statutory responsibility."
+				] })] })
+			]
+		})]
+	});
+}
+var TABS = [
+	{
+		id: "overview",
+		label: "1. Overview & HUD",
+		icon: Compass
+	},
+	{
+		id: "site",
+		label: "2. Site & Terrain",
+		icon: MapPin
+	},
+	{
+		id: "geometry",
+		label: "3. Geometry & Dynamics",
+		icon: Building2
+	},
+	{
+		id: "pressure",
+		label: "4. Velocity Pressure Profile",
+		icon: Waves
+	},
+	{
+		id: "force-coeff",
+		label: "5. Force Coefficients & cscd",
+		icon: Wind
+	},
+	{
+		id: "wind-force",
+		label: "6. Wind Force / Base Shear",
+		icon: Wind
+	},
+	{
+		id: "dynamic",
+		label: "7. Dynamic Response & Comfort",
+		icon: Activity
+	},
+	{
+		id: "report",
+		label: "8. Calculation Report",
+		icon: FileText
+	}
+];
+function WindLoadView() {
+	const userEmail = useProject((s) => s.userEmail);
+	const logout = useProject((s) => s.logout);
+	const setActiveModule = useProject((s) => s.setActiveModule);
+	const [project, setProject] = (0, import_react.useState)(defaultWindLoadProject());
+	const [activeTab, setActiveTab] = (0, import_react.useState)("overview");
+	const pad = (patch) => setProject((prev) => ({
+		...prev,
+		...patch
+	}));
+	const res = (0, import_react.useMemo)(() => analyzeWindLoad(project), [project]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-[#07111f] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute inset-0 bg-[linear-gradient(to_right,#16263d_1px,transparent_1px),linear-gradient(to_bottom,#16263d_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-35 pointer-events-none" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "relative z-20 border-b border-[#1e3a5f]/60 bg-[#060e18]/95 backdrop-blur-md px-6 py-4 flex items-center justify-between",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setActiveModule("modules"),
+							className: "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 font-mono text-xs transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, { className: "size-4" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Modules Dashboard" })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-5 w-px bg-slate-700 hidden sm:block" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "font-display text-sm sm:text-base font-bold tracking-wider text-white uppercase",
+							children: "WIND LOAD ON TALL BUILDING"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "text-[11px] font-mono text-cyan-400",
+							children: ["EN 1991-1-4 · Annex B (cscd) · ", project.nationalAnnex]
+						})] })
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3 font-mono text-xs",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `size-2 rounded-full ${res.overallStatus === "FAIL" ? "bg-rose-500" : res.overallStatus === "WARNING" ? "bg-amber-400" : "bg-emerald-500"} animate-pulse` }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+								res.overallStatus,
+								" · UR ",
+								res.utilizationMax
+							] })]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0b192c] border border-slate-700/70 text-slate-300",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: userEmail || "str.design.test" })
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: logout,
+							className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/80 hover:border-rose-700/60 border border-slate-700 text-slate-300 hover:text-rose-300 transition duration-150",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogOut, { className: "size-3.5" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Logout" })]
+						})
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "relative z-15 bg-[#040910]/90 border-b border-[#1e3a5f]/80 px-6 flex overflow-x-auto gap-1 font-mono text-xs",
 				children: TABS.map((tab) => {
 					const Icon = tab.icon;
 					const isActive = activeTab === tab.id;
@@ -14835,27 +21630,32 @@ function PileCapView() {
 						},
 						setActiveTab
 					}),
-					activeTab === "geometry" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeometryTab, { body: {
+					activeTab === "site" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteTerrainTab, { body: {
 						project,
 						res,
 						pad
 					} }),
-					activeTab === "stm" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StmTab, { body: {
+					activeTab === "geometry" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GeometryDynamicsTab, { body: {
 						project,
 						res,
 						pad
 					} }),
-					activeTab === "shear" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShearTab, { body: {
+					activeTab === "pressure" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PressureProfileTab, { body: {
 						project,
 						res,
 						pad
 					} }),
-					activeTab === "sls" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SlsTab, { body: {
+					activeTab === "force-coeff" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ForceCoefficientsTab, { body: {
 						project,
 						res,
 						pad
 					} }),
-					activeTab === "detailing" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetailingTab, { body: {
+					activeTab === "wind-force" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WindForceTab, { body: {
+						project,
+						res,
+						pad
+					} }),
+					activeTab === "dynamic" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DynamicResponseTab, { body: {
 						project,
 						res,
 						pad
@@ -15120,7 +21920,7 @@ function ExcavationSupportView() {
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "space-y-3",
 							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Retaining wall",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 										value: isCbp ? "cbp" : "sheet-pile",
@@ -15136,7 +21936,7 @@ function ExcavationSupportView() {
 										})]
 									})
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Construction method",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
 										value: method,
@@ -15160,7 +21960,7 @@ function ExcavationSupportView() {
 										]
 									})
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Excavation depth below GL",
 									unit: "m",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -15169,7 +21969,7 @@ function ExcavationSupportView() {
 										onChange: setExcavationDepth
 									})
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Wall toe below GL",
 									unit: "m",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -15178,7 +21978,7 @@ function ExcavationSupportView() {
 										onChange: setWallToe
 									})
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Basement levels",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
 										value: basementLevels,
@@ -15186,7 +21986,7 @@ function ExcavationSupportView() {
 										onChange: (n) => setBasementLevels(Math.max(1, Math.round(n)))
 									})
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$1, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field$4, {
 									label: "Design groundwater below GL",
 									unit: "m",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NumInput, {
@@ -15840,6 +22640,9 @@ function Home() {
 	if (activeModule === "cbp-detail") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CalculatorApp, {});
 	if (activeModule === "bored-pile") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BoredPileView, {});
 	if (activeModule === "pile-cap") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PileCapView, {});
+	if (activeModule === "retaining-wall") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CantileverRetainingWallView, {});
+	if (activeModule === "basement-wall") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BasementWallView, {});
+	if (activeModule === "wind-load") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WindLoadView, {});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ModuleDashboard, {});
 }
 //#endregion

@@ -24,7 +24,7 @@ export type NavId =
   | "sensitivity"
   | "stages";
 
-export type PlatformModule = "modules" | "sheet-pile" | "cbp" | "cbp-detail" | "bored-pile" | "pile-cap";
+export type PlatformModule = "modules" | "sheet-pile" | "cbp" | "cbp-detail" | "bored-pile" | "pile-cap" | "retaining-wall" | "basement-wall" | "wind-load";
 
 interface Store {
   project: Project;

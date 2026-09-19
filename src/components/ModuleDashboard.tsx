@@ -42,7 +42,7 @@ export function ModuleDashboard() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-6 sm:p-10 flex flex-col justify-center">
+      <main className="relative z-10 flex-1 w-full mx-auto px-6 sm:px-10 lg:px-16 xl:px-20 py-6 sm:py-10 flex flex-col justify-center">
         {/* Banner Section */}
         <div className="mb-10 text-center sm:text-left">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/70 border border-cyan-700/50 text-cyan-300 text-xs font-mono font-medium mb-3">
@@ -276,6 +276,190 @@ export function ModuleDashboard() {
             </div>
 
             <button 
+              type="button"
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500"
+            >
+              <span>View Module</span>
+              <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* CARD 5: Cantilever RC Retaining Wall */}
+          <div
+            onClick={() => setActiveModule("retaining-wall")}
+            className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1"
+          >
+            <div className="absolute top-4 right-4">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold">
+                <HardHat className="size-3" /> Active
+              </span>
+            </div>
+
+            <div>
+              <div className="w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative">
+                <svg viewBox="0 0 240 140" className="w-full h-full" fill="none" stroke="currentColor">
+                  {/* Backfill */}
+                  <rect x="150" y="20" width="70" height="90" fill="rgba(125,102,80,0.25)" stroke="#a3866a" strokeWidth="1" />
+                  {/* Stem (battered front face) */}
+                  <polygon points="150,50 150,110 110,110 130,50" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Base slab (toe + heel) */}
+                  <rect x="55" y="110" width="165" height="18" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Active pressure arrow */}
+                  <line x1="150" y1="80" x2="175" y2="80" stroke="#f59e0b" strokeWidth="2" markerEnd="url(#rwArrow)" />
+                  <text x="152" y="72" fill="#f59e0b" fontSize="8" fontFamily="monospace">Pa</text>
+                  <defs>
+                    <marker id="rwArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                      <path d="M0,0 L6,3 L0,6 Z" fill="#f59e0b" />
+                    </marker>
+                  </defs>
+                  <text x="60" y="122" fill="#94a3b8" fontSize="8" fontFamily="monospace">Toe</text>
+                  <text x="190" y="122" fill="#94a3b8" fontSize="8" fontFamily="monospace">Heel</text>
+                </svg>
+              </div>
+
+              <div className="mb-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Earth-Retaining Structure
+                </p>
+                <h3 className="font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
+                  Cantilever RC Retaining Wall
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-2 leading-relaxed">
+                  Cantilever (T/L-shaped) reinforced concrete retaining wall on a spread footing. EN 1997-1 Design Approach 1 sliding,
+                  bearing and eccentricity checks plus EN 1992-1-1 stem, toe and heel design.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Sliding & Bearing</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Stem / Toe / Heel</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">DA1-C1 / DA1-C2</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500"
+            >
+              <span>View Module</span>
+              <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* CARD 6: Basement Retaining Wall (Top-Propped) */}
+          <div
+            onClick={() => setActiveModule("basement-wall")}
+            className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1"
+          >
+            <div className="absolute top-4 right-4">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold">
+                <HardHat className="size-3" /> Active
+              </span>
+            </div>
+
+            <div>
+              <div className="w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative">
+                <svg viewBox="0 0 240 140" className="w-full h-full" fill="none" stroke="currentColor">
+                  {/* Backfill */}
+                  <rect x="150" y="15" width="70" height="95" fill="rgba(125,102,80,0.25)" stroke="#a3866a" strokeWidth="1" />
+                  {/* Ground-floor slab (top prop) */}
+                  <rect x="95" y="10" width="60" height="10" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Wall (prismatic, fixed at base, pinned at top) */}
+                  <rect x="140" y="20" width="14" height="90" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Base slab */}
+                  <rect x="55" y="110" width="165" height="16" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Pin symbol at top prop */}
+                  <circle cx="147" cy="20" r="4" fill="#0b1a2c" stroke="#fef08a" strokeWidth="1.5" />
+                  {/* Trapezoidal pressure */}
+                  <polygon points="154,22 168,60 154,108" fill="rgba(245,158,11,0.18)" stroke="#f59e0b" strokeWidth="1.2" />
+                  <text x="170" y="65" fill="#f59e0b" fontSize="8" fontFamily="monospace">K0/Ka</text>
+                  <text x="98" y="8" fill="#94a3b8" fontSize="8" fontFamily="monospace">G.F. Slab (prop)</text>
+                </svg>
+              </div>
+
+              <div className="mb-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Earth-Retaining Structure
+                </p>
+                <h3 className="font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
+                  Basement Retaining Wall
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-2 leading-relaxed">
+                  Top-propped basement wall (base fixed, ground-floor slab prop). Construction-stage cantilever and permanent propped-stage
+                  force-method design, at-rest (K0) or active (Ka) earth pressure, two-face reinforcement.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Top-Propped</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">K0 / Ka</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Two-Stage Design</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500"
+            >
+              <span>View Module</span>
+              <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* CARD 7: Wind Load on Tall Building */}
+          <div
+            onClick={() => setActiveModule("wind-load")}
+            className="group relative flex flex-col justify-between bg-[#081222]/90 hover:bg-[#0b1b33] border border-slate-700/60 hover:border-cyan-500/70 rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-[0_4px_25px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_35px_rgba(6,182,212,0.15)] hover:-translate-y-1"
+          >
+            <div className="absolute top-4 right-4">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-semibold">
+                <HardHat className="size-3" /> Active
+              </span>
+            </div>
+
+            <div>
+              <div className="w-full h-44 bg-[#03070e] border border-slate-800 rounded-xl mt-3 mb-5 overflow-hidden flex items-center justify-center p-3 relative">
+                <svg viewBox="0 0 240 140" className="w-full h-full" fill="none" stroke="currentColor">
+                  {/* Ground line */}
+                  <line x1="10" y1="120" x2="230" y2="120" stroke="#334155" strokeWidth="1.5" />
+                  {/* Building elevation */}
+                  <rect x="120" y="15" width="40" height="105" fill="rgba(30,58,95,0.4)" stroke="#38bdf8" strokeWidth="1.5" />
+                  {/* Wind pressure arrows, increasing with height */}
+                  <line x1="78" y1="100" x2="118" y2="100" stroke="#f59e0b" strokeWidth="1.5" markerEnd="url(#wlArrow)" />
+                  <line x1="68" y1="70" x2="118" y2="70" stroke="#f59e0b" strokeWidth="1.8" markerEnd="url(#wlArrow)" />
+                  <line x1="58" y1="40" x2="118" y2="40" stroke="#f59e0b" strokeWidth="2.2" markerEnd="url(#wlArrow)" />
+                  <line x1="52" y1="20" x2="118" y2="20" stroke="#f59e0b" strokeWidth="2.6" markerEnd="url(#wlArrow)" />
+                  <defs>
+                    <marker id="wlArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                      <path d="M0,0 L6,3 L0,6 Z" fill="#f59e0b" />
+                    </marker>
+                  </defs>
+                  <text x="128" y="12" fill="#94a3b8" fontSize="8" fontFamily="monospace">H</text>
+                  <text x="40" y="16" fill="#f59e0b" fontSize="8" fontFamily="monospace">qp(z)</text>
+                </svg>
+              </div>
+
+              <div className="mb-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
+                  Wind Action on Structures
+                </p>
+                <h3 className="font-display text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
+                  Wind Load on Tall Building
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-2 leading-relaxed">
+                  EN 1991-1-4 along-wind action on a rectangular prismatic tower: peak velocity pressure profile, force
+                  coefficients, Annex B structural factor (cscd), base shear/overturning moment, and comfort response.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Velocity Pressure Profile</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Structural Factor cscd</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">Base Shear & Overturning</span>
+              </div>
+            </div>
+
+            <button
               type="button"
               className="w-full py-2.5 px-4 bg-slate-800 hover:bg-cyan-700 text-white font-mono text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 border border-slate-700 hover:border-cyan-500"
             >

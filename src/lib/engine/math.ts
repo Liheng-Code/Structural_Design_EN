@@ -217,25 +217,40 @@ export function beamFem(opts: {
     th[i] = u[2 * i + 1] ?? 0;
   }
 
+  // Recover V and M by direct equilibrium integration from the free top end (z[0]):
+  // V(x) = ∫ w dx, M(x) = ∫ V dx, where w is the net transverse load (applied pressure
+  // plus Winkler foundation reaction, plus discrete spring point reactions). Both ends
+  // of the pile/sheet-pile are physically free (no support besides the modelled
+  // springs), so this integration is exact and self-consistent (dM/dx ≡ V by
+  // construction). This replaces a per-element Hermite-curvature recovery whose shear
+  // formula was not consistent with its own moment field (verified against a
+  // closed-form semi-infinite beam-on-elastic-foundation solution and global
+  // equilibrium: V and M at a free end must be zero).
+  const springForceAt = new Map<number, number>();
+  for (const s of opts.springs) {
+    let nearest = 0;
+    let best = Infinity;
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(z[i]! - s.z);
+      if (d < best) {
+        best = d;
+        nearest = i;
+      }
+    }
+    const F_spring = -s.k * (y[nearest] ?? 0);
+    springForceAt.set(nearest, (springForceAt.get(nearest) ?? 0) + F_spring);
+  }
+
+  const wNet = z.map((_, i) => (opts.p[i] ?? 0) - (opts.kSoil[i] ?? 0) * (y[i] ?? 0));
+
   const M = Array(n).fill(0);
   const V = Array(n).fill(0);
-  for (let e = 0; e < n - 1; e++) {
-    const L = Math.abs(z[e + 1]! - z[e]!);
-    if (L < 1e-9) continue;
-    const EI = opts.EI;
-    const y1 = y[e]!;
-    const t1 = th[e]!;
-    const y2 = y[e + 1]!;
-    const t2 = th[e + 1]!;
-    const Me1 = EI * (6 / L ** 2) * (y1 - y2) + EI * (4 / L) * t1 + EI * (2 / L) * t2;
-    const Me2 = EI * (6 / L ** 2) * (y2 - y1) + EI * (2 / L) * t1 + EI * (4 / L) * t2;
-    M[e] = e === 0 ? Me1 : 0.5 * (M[e]! + Me1);
-    M[e + 1] = Me2;
-    const p1 = opts.p[e] ?? 0;
-    const p2 = opts.p[e + 1] ?? 0;
-    const Ve = (Me1 + Me2) / L + 0.5 * (p1 + p2) * L;
-    V[e] = e === 0 ? Ve : 0.5 * (V[e]! + Ve);
-    V[e + 1] = Ve - 0.5 * (p1 + p2) * L;
+  V[0] = springForceAt.get(0) ?? 0;
+  for (let i = 1; i < n; i++) {
+    const dx = Math.abs(z[i]! - z[i - 1]!);
+    V[i] = V[i - 1]! + 0.5 * (wNet[i - 1]! + wNet[i]!) * dx;
+    M[i] = M[i - 1]! + 0.5 * (V[i - 1]! + V[i]!) * dx;
+    V[i] += springForceAt.get(i) ?? 0;
   }
 
   return { z, y, th, V, M, p: opts.p };

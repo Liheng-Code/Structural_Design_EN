@@ -4,6 +4,9 @@ import { LandingLoginScreen } from "@/components/LandingLoginScreen";
 import { ModuleDashboard } from "@/components/ModuleDashboard";
 import { BoredPileView } from "@/components/BoredPileView";
 import { PileCapView } from "@/components/PileCapView";
+import { CantileverRetainingWallView } from "@/components/CantileverRetainingWallView";
+import { BasementWallView } from "@/components/BasementWallView";
+import { WindLoadView } from "@/components/WindLoadView";
 import { ExcavationSupportView } from "@/components/ExcavationSupportView";
 import { useProject } from "@/lib/store";
 
@@ -31,6 +34,18 @@ function Home() {
 
   if (activeModule === "pile-cap") {
     return <PileCapView />;
+  }
+
+  if (activeModule === "retaining-wall") {
+    return <CantileverRetainingWallView />;
+  }
+
+  if (activeModule === "basement-wall") {
+    return <BasementWallView />;
+  }
+
+  if (activeModule === "wind-load") {
+    return <WindLoadView />;
   }
 
   return <ModuleDashboard />;

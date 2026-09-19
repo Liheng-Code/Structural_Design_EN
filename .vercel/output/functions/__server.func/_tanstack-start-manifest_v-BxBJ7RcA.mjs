@@ -1,19 +1,19 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-DOCVt4X-.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BxBJ7RcA.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "D:/structural_design_en/Structural_Design_EN/src/routes/__root.tsx",
 		children: ["/"],
-		preloads: ["/assets/index-BttZDVK2.js"],
+		preloads: ["/assets/index-De0h3vro.js"],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-BttZDVK2.js"
+			src: "/assets/index-De0h3vro.js"
 		} }]
 	},
 	"/": {
 		filePath: "D:/structural_design_en/Structural_Design_EN/src/routes/index.tsx",
 		children: void 0,
-		preloads: ["/assets/routes-bzM0Ry7k.js"]
+		preloads: ["/assets/routes-BH6Eo2io.js"]
 	}
 } });
 //#endregion
