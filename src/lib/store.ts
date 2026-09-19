@@ -24,17 +24,25 @@ export type NavId =
   | "sensitivity"
   | "stages";
 
+export type PlatformModule = "modules" | "sheet-pile" | "bored-pile" | "pile-cap";
+
 interface Store {
   project: Project;
   nav: NavId;
   loadCaseId: string;
   highlight: string | null;
+  isAuthenticated: boolean;
+  userEmail: string;
+  activeModule: PlatformModule;
   setNav: (n: NavId) => void;
   setLoadCase: (id: string) => void;
   setHighlight: (s: string | null) => void;
   setProject: (p: Project) => void;
+  setActiveModule: (m: PlatformModule) => void;
   patch: (fn: (p: Project) => void) => void;
   reset: () => void;
+  login: (email: string, pass: string) => boolean;
+  logout: () => void;
 }
 
 export const NAV_ITEMS: { id: NavId; n: string; label: string }[] = [
@@ -66,10 +74,14 @@ export const useProject = create<Store>()(
       nav: "results",
       loadCaseId: "LC-05",
       highlight: null,
+      isAuthenticated: false,
+      userEmail: "str.design.test",
+      activeModule: "modules",
       setNav: (nav) => set({ nav }),
       setLoadCase: (loadCaseId) => set({ loadCaseId }),
       setHighlight: (highlight) => set({ highlight }),
       setProject: (project) => set({ project }),
+      setActiveModule: (activeModule) => set({ activeModule }),
       patch: (fn) =>
         set((s) => {
           const project = structuredClone(s.project);
@@ -77,6 +89,14 @@ export const useProject = create<Store>()(
           return { project };
         }),
       reset: () => set({ project: defaultProject(), loadCaseId: "LC-05" }),
+      login: (email, pass) => {
+        if (pass === "123!test") {
+          set({ isAuthenticated: true, userEmail: email || "str.design.test", activeModule: "modules" });
+          return true;
+        }
+        return false;
+      },
+      logout: () => set({ isAuthenticated: false, activeModule: "modules" }),
     }),
     {
       name: "eurocode-u-sheet-pile-v2",
@@ -85,7 +105,13 @@ export const useProject = create<Store>()(
         setItem: () => {},
         removeItem: () => {},
       } : localStorage)),
-      partialize: (s) => ({ project: s.project, loadCaseId: s.loadCaseId }),
+      partialize: (s) => ({
+        project: s.project,
+        loadCaseId: s.loadCaseId,
+        isAuthenticated: s.isAuthenticated,
+        userEmail: s.userEmail,
+        activeModule: s.activeModule,
+      }),
       skipHydration: true,
     },
   ),

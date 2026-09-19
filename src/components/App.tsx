@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
   Download,
   FolderOpen,
+  LogOut,
   Menu,
   Printer,
   RotateCcw,
@@ -46,6 +48,8 @@ export function CalculatorApp() {
   const setLoadCase = useProject((s) => s.setLoadCase);
   const setProject = useProject((s) => s.setProject);
   const reset = useProject((s) => s.reset);
+  const logout = useProject((s) => s.logout);
+  const setActiveModule = useProject((s) => s.setActiveModule);
   const [menu, setMenu] = useState(false);
 
   useEffect(() => {
@@ -63,6 +67,15 @@ export function CalculatorApp() {
     <div className="min-h-dvh bg-paper text-ink">
       <header className="title-block no-print sticky top-0 z-30">
         <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+          <button
+            type="button"
+            onClick={() => setActiveModule("modules")}
+            className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-mono bg-navy-mid/80 hover:bg-navy-mid border border-cyan-500/40 text-paper transition"
+            title="Return to Modules Dashboard"
+          >
+            <ArrowLeft className="size-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Modules</span>
+          </button>
           <button className="lg:hidden min-h-10 min-w-10" onClick={() => setMenu(true)} aria-label="Open navigation">
             <Menu className="size-5" />
           </button>
@@ -101,6 +114,9 @@ export function CalculatorApp() {
             </label>
             <Button variant="ghost" className="text-paper hover:bg-navy-mid" onClick={() => reset()}>
               <RotateCcw className="size-4" /> Reset
+            </Button>
+            <Button variant="ghost" className="text-rose-300 hover:bg-rose-950/50 hover:text-rose-200" onClick={() => logout()}>
+              <LogOut className="size-4" /> Logout
             </Button>
           </div>
         </div>
