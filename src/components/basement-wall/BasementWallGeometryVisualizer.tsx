@@ -83,79 +83,40 @@ export function BasementWallGeometryVisualizer({ project, result }: VisualizerPr
   const innerUtil = result.innerAsRequired > 0 ? result.innerAsRequired / Math.max(1, result.innerAsProvided) : 0;
   const outerUtil = result.outerAsRequired > 0 ? result.outerAsRequired / Math.max(1, result.outerAsProvided) : 0;
 
-  // Compute Moment, Shear, and Deflection Profiles along height
+  // Moment, shear and deflection profiles along the height — taken directly from the analysis engine
+  // (permanent stage, force-method solution): M and V for the governing ULS combination, δ from double
+  // integration of the quasi-permanent curvature M/EI (see analyzeBasementWall). Nothing is re-derived here.
   const { momentPts, shearPts, deflectionPts, maxDeflectionMm, peakDepthRatio, intermediateStations } = useMemo(() => {
-    const n = 61;
+    const { z, M, V, deflection } = result.permanentDiagram;
     const H = project.stemHeight / 1000; // m
-    const baseM = result.permanent.baseMEd; // kNm/m
-    const spanM = result.permanent.spanMEd; // kNm/m
-    const propR = result.permanent.propReaction; // kN/m
-    const baseV = result.permanent.baseVEd; // kN/m
-    const spanDepthM = result.permanent.spanDepthFromTop / 1000;
+    const maxDefl = Math.abs(result.maxDeflection);
+    const norm = maxDefl > 1e-9 ? maxDefl : 1;
 
-    // Estimate flexural stiffness EI (cracked SLS)
-    const Ecm = result.ecm * 1e6; // kPa
-    const tM = project.wallThickness / 1000;
-    const Ig = (1.0 * Math.pow(tM, 3)) / 12;
-    const Icr = 0.5 * Ig; // approximate cracked inertia for RC wall
-    const EI = Ecm * Icr; // kNm²
-
-    const mArr: { y: number; m: number }[] = [];
-    const vArr: { y: number; v: number }[] = [];
-    const dArr: { y: number; delta: number; normalizedShape: number; zM: number; xi: number }[] = [];
-
-    let maxDelta = 0;
-    let maxDeltaRatio = 0.42;
-
-    for (let i = 0; i <= n; i++) {
-      const zM = (H * i) / n; // 0 to H
-      const yPx = wallTopY + zM * 1000 * scaleY;
-      const xi = zM / H;
-
-      // Realistic propped cantilever bending moment M(z)
-      let mVal = 0;
-      if (spanDepthM > 0 && spanDepthM < H) {
-        if (zM <= spanDepthM) {
-          const ratio = zM / spanDepthM;
-          mVal = -spanM * Math.sin((ratio * Math.PI) / 2);
-        } else {
-          const ratio = (zM - spanDepthM) / (H - spanDepthM);
-          mVal = -spanM * Math.cos((ratio * Math.PI) / 2) + baseM * Math.pow(ratio, 2);
+    const interpAt = (ys: number[], zM: number) => {
+      if (z.length === 0) return 0;
+      if (zM <= z[0]!) return ys[0]!;
+      for (let i = 1; i < z.length; i++) {
+        if (zM <= z[i]!) {
+          const t = (zM - z[i - 1]!) / (z[i]! - z[i - 1]! || 1);
+          return ys[i - 1]! + t * (ys[i]! - ys[i - 1]!);
         }
-      } else {
-        mVal = baseM * Math.pow(xi, 2) - propR * zM * (1 - xi);
       }
+      return ys[ys.length - 1]!;
+    };
 
-      // Shear force V(z)
-      const vVal = -propR + (baseV + propR) * Math.pow(xi, 1.3);
+    const mArr = z.map((zM, i) => ({ y: wallTopY + zM * 1000 * scaleY, m: M[i]! }));
+    const vArr = z.map((zM, i) => ({ y: wallTopY + zM * 1000 * scaleY, v: V[i]! }));
+    const dArr = z.map((zM, i) => ({
+      y: wallTopY + zM * 1000 * scaleY,
+      delta: deflection[i]!,
+      normalizedShape: deflection[i]! / norm,
+      zM,
+      xi: H > 0 ? zM / H : 0,
+    }));
 
-      // SLS Lateral Deflection delta(z) for propped cantilever under trapezoidal pressure
-      // Boundary conditions: delta(0)=0 (pinned prop), delta(H)=0 (fixed base), slope(H)=0
-      const shape = xi * Math.pow(1 - xi, 2) * (2 - xi);
-      const normalizedShape = shape / 0.148; // Peak normalized to 1.0 at ~0.42H
-      const qChar = (project.gammaBackfill * H + project.serviceSurchargeKpa) * 0.45;
-      const calcDelta = (qChar * Math.pow(H, 4) * 1000 * 3.2 * shape) / Math.max(1000, EI);
-      const deltaMm = Math.max(0, calcDelta);
-
-      if (deltaMm > maxDelta) {
-        maxDelta = deltaMm;
-        maxDeltaRatio = xi;
-      }
-
-      mArr.push({ y: yPx, m: mVal });
-      vArr.push({ y: yPx, v: vVal });
-      dArr.push({ y: yPx, delta: deltaMm, normalizedShape, zM, xi });
-    }
-
-    const maxDefl = Math.min(25, Math.max(0.6, maxDelta));
-
-    // Intermediate readout stations (20%, 70%) cleanly spaced from peak at ~42%
-    const stations = [0.20, 0.70].map((ratio) => {
+    const stations = [0.2, 0.7].map((ratio) => {
       const zM = H * ratio;
-      const yPx = wallTopY + zM * 1000 * scaleY;
-      const shape = ratio * Math.pow(1 - ratio, 2) * (2 - ratio);
-      const deltaMm = maxDefl * (shape / 0.148);
-      return { ratio, zM, yPx, deltaMm };
+      return { ratio, zM, yPx: wallTopY + zM * 1000 * scaleY, deltaMm: interpAt(deflection, zM) };
     });
 
     return {
@@ -163,7 +124,7 @@ export function BasementWallGeometryVisualizer({ project, result }: VisualizerPr
       shearPts: vArr,
       deflectionPts: dArr,
       maxDeflectionMm: maxDefl,
-      peakDepthRatio: maxDeltaRatio,
+      peakDepthRatio: project.stemHeight > 0 ? result.maxDeflectionDepth / project.stemHeight : 0,
       intermediateStations: stations,
     };
   }, [project, result, scaleY, wallTopY]);
@@ -1319,7 +1280,7 @@ export function BasementWallGeometryVisualizer({ project, result }: VisualizerPr
                     )}
 
                     {isDedicated && intermediateStations.map((st, i) => {
-                      const stShift = -(st.deltaMm / maxDeflectionMm) * maxCurveWidthPx;
+                      const stShift = -(st.deltaMm / Math.max(1e-9, maxDeflectionMm)) * maxCurveWidthPx;
                       const stX = baselineX + stShift;
                       return (
                         <g key={i}>
@@ -1396,7 +1357,7 @@ export function BasementWallGeometryVisualizer({ project, result }: VisualizerPr
                                 fill="#a7f3d0"
                                 fontSize="7.5"
                               >
-                                at depth z = {(project.stemHeight * peakDepthRatio / 1000).toFixed(2)} m (≈0.42H)
+                                at depth z = {(project.stemHeight * peakDepthRatio / 1000).toFixed(2)} m (≈{peakDepthRatio.toFixed(2)}H)
                               </text>
                             )}
                           </g>
@@ -1540,6 +1501,9 @@ export function BasementWallGeometryVisualizer({ project, result }: VisualizerPr
           </p>
           <p className="text-[10px] font-mono text-slate-400 mt-1">
             Limit: ≤ {allowableDeflectionMm.toFixed(1)} mm (H/500)
+          </p>
+          <p className="text-[10px] font-mono text-slate-500 mt-0.5">
+            QP, EI = Ecm·0.5Ig = {result.slsEI} kNm²/m (short-term, indicative)
           </p>
         </div>
 

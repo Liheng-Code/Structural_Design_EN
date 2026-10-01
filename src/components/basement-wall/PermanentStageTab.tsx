@@ -21,9 +21,22 @@ export function PermanentStageTab({ body }: { body: Body }) {
           </Eq>
           <Eq>
             <div>Base (hogging, inner face): M_Ed = {res.permanent.baseMEd} kNm/m, V_Ed = {res.permanent.baseVEd} kN/m</div>
-            <div className="text-slate-400 mt-1">Span (sagging, outer face): M_Ed = {res.permanent.spanMEd} kNm/m, V_Ed = {res.permanent.spanVEd} kN/m</div>
+            <div className="text-slate-400 mt-1">Span (sagging, outer face): M_Ed = {res.permanent.spanMEd} kNm/m; V_Ed,max (prop → contraflexure) = {res.permanent.spanVEd} kN/m</div>
           </Eq>
         </div>
+      </Section>
+
+      <Section title="Top Connection — Prop Transfer into Ground-Floor Slab" hint="P crosses the horizontal construction joint at the wall head as interface shear (rough joint, σn = 0)">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="v_Edi = P / t_wall" value={`${res.topInterfaceVEdi}`} unit="MPa" />
+          <StatCard label="v_Rdi" value={`${res.topInterfaceVRdi}`} unit="MPa" tone={res.topInterfaceVEdi > res.topInterfaceVRdi ? "rose" : "emerald"} />
+          <StatCard label="Top dowels As,prov" value={`${res.topDowelAsProvided}`} unit="mm²/m" />
+          <StatCard label="l_bd req / avail" value={`${res.topDowelAnchorageRequired} / ${res.topDowelAnchorageAvailable}`} unit="mm" tone={res.topDowelAnchorageRequired > res.topDowelAnchorageAvailable ? "rose" : "emerald"} />
+        </div>
+        <Eq>
+          <div>v_Rdi = c·fctd + ρ·fyd·μ ≤ 0.5·ν·fcd, c = 0.4, μ = 0.7 (rough), ρ = As/(1000·t_wall) — EN 1992-1-1 §6.2.5</div>
+          <div className="text-slate-400 mt-1">l_bd = max(Ø/4·σsd/fbd, l_b,min), σsd = fyd·As,req/As,prov — EN 1992-1-1 §8.4.3/§8.4.4</div>
+        </Eq>
       </Section>
 
       <Section title="SLS — Crack Width (Quasi-Permanent)" hint="G characteristic + ψ2·Q; checked at the base (inner face) and at the span (outer face)">

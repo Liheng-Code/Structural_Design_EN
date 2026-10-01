@@ -88,23 +88,40 @@ function integrateFreeEnd(z: number[], p: number[]): { V: number[]; M: number[] 
   return { V, M };
 }
 
+/** Linear interpolation of ys(xs) at x (xs ascending). */
+function interp(xs: number[], ys: number[], x: number): number {
+  if (xs.length === 0) return 0;
+  if (x <= xs[0]!) return ys[0]!;
+  for (let i = 1; i < xs.length; i++) {
+    if (x <= xs[i]!) {
+      const t = (x - xs[i - 1]!) / (xs[i]! - xs[i - 1]! || 1);
+      return ys[i - 1]! + t * (ys[i]! - ys[i - 1]!);
+    }
+  }
+  return ys[ys.length - 1]!;
+}
+
 interface FlexureResult {
   asRequired: number; // mm2/m
   mRd: number; // kNm/m
+  mRdMax: number; // kNm/m, singly-reinforced limit at K' = 0.167
+  overLimit: boolean; // true when K > K' — compression steel / thicker section required
 }
 
 /** Concise EC2 singly-reinforced rectangular section design, per metre width (b = 1000 mm). */
 function flexuralDesign(mEdKnmPerM: number, dMm: number, fckMpa: number, fydMpa: number): FlexureResult {
   const b = 1000;
   const mEd = Math.abs(mEdKnmPerM) * 1e6; // Nmm/m
-  if (mEd <= 0 || dMm <= 0) return { asRequired: 0, mRd: 0 };
-  const K = mEd / (b * dMm * dMm * fckMpa);
   const Kbal = 0.167; // EC2 concise method, x/d limit ~0.45 (no compression steel)
+  const mRdMax = (Kbal * b * dMm * dMm * fckMpa) / 1e6;
+  if (mEd <= 0 || dMm <= 0) return { asRequired: 0, mRd: 0, mRdMax, overLimit: false };
+  const K = mEd / (b * dMm * dMm * fckMpa);
+  const overLimit = K > Kbal;
   const Kuse = Math.min(K, Kbal);
   const z = Math.min(0.95 * dMm, dMm * (0.5 + Math.sqrt(Math.max(0, 0.25 - Kuse / 1.134))));
   const asRequired = mEd / (fydMpa * z);
   const mRd = (fydMpa * asRequired * z) / 1e6;
-  return { asRequired, mRd };
+  return { asRequired, mRd, mRdMax, overLimit };
 }
 
 function vRdcOf(rho: number, dMm: number, fckMpa: number, gammaC: number): number {
@@ -114,7 +131,8 @@ function vRdcOf(rho: number, dMm: number, fckMpa: number, gammaC: number): numbe
 }
 
 function crackWidthOf(mQpKnmPerM: number, asProvided: number, dMm: number, hMm: number, barDiameter: number, cNom: number, fctm: number, ecm: number) {
-  const sigmaSqp = mQpKnmPerM > 0 ? (mQpKnmPerM * 1e6) / (asProvided * 0.9 * dMm) / 1000 : 0; // MPa, lever arm ~0.9d approx
+  // kNm/m × 1e6 = Nmm/m; Nmm / (mm²·mm) = N/mm² = MPa. Lever arm ~0.9d (approx.)
+  const sigmaSqp = mQpKnmPerM > 0 ? (mQpKnmPerM * 1e6) / (asProvided * 0.9 * dMm) : 0;
   const hMinusD = Math.max(10, hMm - dMm);
   const acEff = 1000 * Math.min(2.5 * hMinusD, hMm / 2);
   const rhoPeff = Math.max(1e-4, asProvided / acEff);
@@ -135,6 +153,9 @@ interface ComboStageResult {
   spanMEd: number; // kNm/m, magnitude (0 if no sagging reversal)
   spanVEd: number; // kN/m, magnitude
   spanDepthFromTop: number; // m
+  z: number[]; // m from top
+  M: number[]; // kNm/m, + hogging (inner face tension)
+  V: number[]; // kN/m
 }
 
 export function analyzeBasementWall(project: BasementWallProject): BasementWallAnalysisResult {
@@ -168,6 +189,9 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
     innerFaceBarSpacing: pos(project.innerFaceBarSpacing, 150),
     outerFaceBarDiameter: pos(project.outerFaceBarDiameter, 16),
     outerFaceBarSpacing: pos(project.outerFaceBarSpacing, 150),
+    topSlabThickness: pos(project.topSlabThickness, 250),
+    topDowelBarDiameter: pos(project.topDowelBarDiameter, 16),
+    topDowelBarSpacing: pos(project.topDowelBarSpacing, 150),
     baseThickness: pos(project.baseThickness, 400),
     baseSupportType: project.baseSupportType === "strip footing" ? "strip footing" : "raft",
     baseDowelBarDiameter: pos(project.baseDowelBarDiameter, 16),
@@ -239,6 +263,9 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
         spanMEd: 0,
         spanVEd: 0,
         spanDepthFromTop: 0,
+        z,
+        M: M0,
+        V: V0,
       };
     }
 
@@ -263,17 +290,24 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
       }
     }
     const spanMEd = minIdx >= 0 ? Math.abs(minM) : 0;
-    const spanVEd = minIdx >= 0 ? Math.abs(V[minIdx]!) : 0;
     const spanDepthFromTop = minIdx >= 0 ? z[minIdx]! : 0;
 
-    return { kUsed, kLabel, propReaction: P, baseMEd, baseVEd, spanMEd, spanVEd, spanDepthFromTop };
+    // Front-face shear: the outer bars are the tension steel over the whole sagging zone, from the
+    // prop (z = 0, where |V| = P) down to the point of contraflexure. The shear at the point of max
+    // sagging is ~0 by definition, so the check takes the max |V| over that zone instead.
+    let spanVEd = 0;
+    if (minIdx >= 0) {
+      for (let i = 0; i < M.length && M[i]! <= 1e-9; i++) spanVEd = Math.max(spanVEd, Math.abs(V[i]!));
+    }
+
+    return { kUsed, kLabel, propReaction: P, baseMEd, baseVEd, spanMEd, spanVEd, spanDepthFromTop, z, M, V };
   }
 
-  function governStage(stage: BasementWallStage): StageForces {
+  function governStage(stage: BasementWallStage): { forces: StageForces; gov: ComboStageResult } {
     const c1 = runStage(stage, DA1_C1);
     const c2 = runStage(stage, DA1_C2);
     const baseGov = c1.baseMEd >= c2.baseMEd ? c1 : c2;
-    return {
+    const forces: StageForces = {
       kUsed: round(baseGov.kUsed, 4),
       kLabel: baseGov.kLabel,
       propReaction: round(Math.max(Math.abs(c1.propReaction), Math.abs(c2.propReaction))),
@@ -283,10 +317,11 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
       spanVEd: round(Math.max(c1.spanVEd, c2.spanVEd)),
       spanDepthFromTop: Math.round(baseGov.spanDepthFromTop * 1000),
     };
+    return { forces, gov: baseGov };
   }
 
-  const construction = governStage("Construction");
-  const permanent = governStage("Permanent");
+  const construction = governStage("Construction").forces;
+  const { forces: permanent, gov: permanentGov } = governStage("Permanent");
 
   // ----- Governing design forces (max magnitude across stages) -----
   const baseMEdGov = Math.max(construction.baseMEd, permanent.baseMEd);
@@ -310,13 +345,21 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
   const innerAsRequired = Math.max(csBaseFlex.asRequired, psBaseFlex.asRequired);
   const outerAsRequired = psSpanFlex.asRequired;
 
+  // Flexure: As,req vs As,prov, but FAIL outright when K > K' (section needs compression steel / more
+  // thickness) — capping K at K' would otherwise under-report As,req and hide the inadequacy.
+  const flexUR = (f: FlexureResult, mEd: number, asProv: number) =>
+    f.overLimit ? Math.max(safeRatio(f.asRequired, asProv), safeRatio(mEd, f.mRdMax)) : safeRatio(f.asRequired, asProv);
+  const flexStatus = (f: FlexureResult, asProv: number): BasementWallCheckStatus => (f.overLimit ? "FAIL" : passFail(f.asRequired, asProv));
+  const flexClause = (f: FlexureResult) =>
+    f.overLimit ? "EN 1992-1-1 §6.1 — K > K' = 0.167: compression steel required; increase wall thickness" : "EN 1992-1-1 §6.1";
+
   // ----- ULS checks -----
-  push("UL-01", "Construction-stage base flexure (back face)", "ULS", "Construction", csBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", safeRatio(csBaseFlex.asRequired, innerAsProvided), passFail(csBaseFlex.asRequired, innerAsProvided), "EN 1992-1-1 §6.1");
+  push("UL-01", "Construction-stage base flexure (back face)", "ULS", "Construction", csBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", flexUR(csBaseFlex, construction.baseMEd, innerAsProvided), flexStatus(csBaseFlex, innerAsProvided), flexClause(csBaseFlex));
   push("UL-02", "Construction-stage base shear (back face)", "ULS", "Construction", construction.baseVEd, "kN/m", innerVRdc, "kN/m", safeRatio(construction.baseVEd, innerVRdc), passFail(construction.baseVEd, innerVRdc), "EN 1992-1-1 §6.2.2");
-  push("UL-03", "Permanent-stage base flexure (back face)", "ULS", "Permanent", psBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", safeRatio(psBaseFlex.asRequired, innerAsProvided), passFail(psBaseFlex.asRequired, innerAsProvided), "EN 1992-1-1 §6.1");
+  push("UL-03", "Permanent-stage base flexure (back face)", "ULS", "Permanent", psBaseFlex.asRequired, "mm²/m", innerAsProvided, "mm²/m", flexUR(psBaseFlex, permanent.baseMEd, innerAsProvided), flexStatus(psBaseFlex, innerAsProvided), flexClause(psBaseFlex));
   push("UL-04", "Permanent-stage base shear (back face)", "ULS", "Permanent", permanent.baseVEd, "kN/m", innerVRdc, "kN/m", safeRatio(permanent.baseVEd, innerVRdc), passFail(permanent.baseVEd, innerVRdc), "EN 1992-1-1 §6.2.2");
-  push("UL-05", "Permanent-stage span flexure (front face)", "ULS", "Permanent", psSpanFlex.asRequired, "mm²/m", outerAsProvided, "mm²/m", safeRatio(psSpanFlex.asRequired, outerAsProvided), passFail(psSpanFlex.asRequired, outerAsProvided), "EN 1992-1-1 §6.1");
-  push("UL-06", "Permanent-stage span shear (front face)", "ULS", "Permanent", permanent.spanVEd, "kN/m", outerVRdc, "kN/m", safeRatio(permanent.spanVEd, outerVRdc), passFail(permanent.spanVEd, outerVRdc), "EN 1992-1-1 §6.2.2");
+  push("UL-05", "Permanent-stage span flexure (front face)", "ULS", "Permanent", psSpanFlex.asRequired, "mm²/m", outerAsProvided, "mm²/m", flexUR(psSpanFlex, permanent.spanMEd, outerAsProvided), flexStatus(psSpanFlex, outerAsProvided), flexClause(psSpanFlex));
+  push("UL-06", "Permanent-stage shear, prop to contraflexure (front face)", "ULS", "Permanent", permanent.spanVEd, "kN/m", outerVRdc, "kN/m", safeRatio(permanent.spanVEd, outerVRdc), passFail(permanent.spanVEd, outerVRdc), "EN 1992-1-1 §6.2.2");
   push("UL-07", "Minimum reinforcement — inner (back) face", "ULS", "Both", innerAsMin, "mm²/m", innerAsProvided, "mm²/m", safeRatio(innerAsMin, innerAsProvided), passFail(innerAsMin, innerAsProvided), "EN 1992-1-1 §9.2.1.1");
   push("UL-08", "Minimum reinforcement — outer (front) face", "ULS", "Permanent", outerAsMin, "mm²/m", outerAsProvided, "mm²/m", safeRatio(outerAsMin, outerAsProvided), passFail(outerAsMin, outerAsProvided), "EN 1992-1-1 §9.2.1.1");
 
@@ -326,6 +369,31 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
   const baseDowelAnchorageAvailable = Math.max(0, p.baseThickness - 2 * p.cNomBuried);
   push("DT-09", "Base dowel / starter bar anchorage into base slab", "Durability", "Both", baseDowelAnchorageRequired, "mm", baseDowelAnchorageAvailable, "mm", safeRatio(baseDowelAnchorageRequired, baseDowelAnchorageAvailable), passFail(baseDowelAnchorageRequired, baseDowelAnchorageAvailable), "EN 1992-1-1 §8.4 (simplified straight length)");
   push("DT-10", "Curtailment of hogging steel past point of contraflexure", "Durability", "Permanent", 0, "-", 0, "-", 0, "NOT VERIFIED", "Out of scope — verify bar cut-off/anchorage lengths separately per EN 1992-1-1 §9.2.1.3 / §8.4");
+
+  // ----- Top connection: prop reaction P transferred into the ground-floor slab -----
+  // The wall stops at the slab soffit, so P crosses the horizontal construction joint at the wall
+  // head as interface shear (EN 1992-1-1 §6.2.5). Rough joint (c = 0.4, μ = 0.7), dowels normal to
+  // the joint (α = 90°), σn = 0 (slab self-weight conservatively ignored). Interface width = wall thickness.
+  const topDowelAsProvided = barArea(p.topDowelBarDiameter) * (1000 / p.topDowelBarSpacing);
+  const JOINT_C = 0.4;
+  const JOINT_MU = 0.7;
+  const fctd = fctk005 / p.gammaC; // αct = 1.0 (UK NA)
+  const nu = 0.6 * (1 - p.fck / 250);
+  const rhoJoint = topDowelAsProvided / (1000 * p.wallThickness);
+  const vEdi = permanent.propReaction / p.wallThickness; // kN/m ÷ mm = N/mm² (MPa)
+  const vRdi = Math.min(JOINT_C * fctd + rhoJoint * fyd * JOINT_MU, 0.5 * nu * fcd);
+  push("UL-17", "Prop transfer — interface shear at wall/ground-floor slab joint", "ULS", "Permanent", vEdi, "MPa", vRdi, "MPa", safeRatio(vEdi, vRdi), passFail(vEdi, vRdi), "EN 1992-1-1 §6.2.5 (rough joint c = 0.4, μ = 0.7, σn = 0)");
+
+  // Anchorage of the top dowels into the slab: design bar stress σsd = fyd·As,req/As,prov, where
+  // As,req is the dowel area the interface actually needs (§6.2.5 solved for ρ). lb,rqd = (Ø/4)(σsd/fbd);
+  // l_bd = max(lb,rqd, lb,min) with lb,min = max(0.3·(Ø/4)(fyd/fbd), 10Ø, 100 mm) — §8.4.3/§8.4.4, α1..α5 = 1.
+  const topDowelAsRequired = Math.max(0, ((vEdi - JOINT_C * fctd) * 1000 * p.wallThickness) / (JOINT_MU * fyd));
+  const sigmaSdTop = fyd * Math.min(1, topDowelAsRequired / topDowelAsProvided);
+  const lbRqdTop = (p.topDowelBarDiameter / 4) * (sigmaSdTop / fbd);
+  const lbMinTop = Math.max(0.3 * (p.topDowelBarDiameter / 4) * (fyd / fbd), 10 * p.topDowelBarDiameter, 100);
+  const topDowelAnchorageRequired = Math.max(lbRqdTop, lbMinTop);
+  const topDowelAnchorageAvailable = Math.max(0, p.topSlabThickness - p.cNomBuried);
+  push("DT-18", "Top dowel anchorage into ground-floor slab", "Durability", "Permanent", topDowelAnchorageRequired, "mm", topDowelAnchorageAvailable, "mm", safeRatio(topDowelAnchorageRequired, topDowelAnchorageAvailable), passFail(topDowelAnchorageRequired, topDowelAnchorageAvailable), "EN 1992-1-1 §8.4.3/§8.4.4 (σsd from §6.2.5 demand; slab top cover taken = c_nom inner)");
 
   // ----- Load path outputs (informational, feeding adjacent element design) -----
   push("LP-11", "Top prop reaction -> ground-floor slab/diaphragm design input", "Load Path", "Permanent", permanent.propReaction, "kN/m", 0, "-", 0, "NOT VERIFIED", "Load path — demand only; ground-floor slab/diaphragm design out of scope");
@@ -342,6 +410,29 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
   // ----- Durability / delegated checks -----
   push("DR-15", `Global bearing / sliding of raft (baseSupportType="${p.baseSupportType}")`, "Durability", "Both", 0, "-", 0, "-", 0, "NOT VERIFIED", "Delegated to the building's overall raft/foundation design — not verified in this module");
   push("DR-16", "Water resistance / waterproofing grade (e.g. BS 8102)", "Durability", "Both", 0, "-", 0, "-", 0, "NOT VERIFIED", "Specialist waterproofing design — out of structural scope; structural water pressure only is included in loading");
+
+  // ----- SLS deflection (quasi-permanent), indicative -----
+  // Curvature κ = M_qp/EI integrated twice from the fixed base (δ = θ = 0 at z = H) up to the prop.
+  // EI = Ecm · 0.5·Ig (cracked-section allowance, short-term — ASSUMED; creep not included).
+  const slsEI = ecm * 1000 * 0.5 * (Math.pow(p.wallThickness / 1000, 3) / 12); // kNm²/m
+  const qz = qpPermanent.z;
+  const n = qz.length;
+  const theta = new Array<number>(n).fill(0);
+  const delta = new Array<number>(n).fill(0);
+  for (let i = n - 2; i >= 0; i--) {
+    const ds = qz[i + 1]! - qz[i]!;
+    theta[i] = theta[i + 1]! + (0.5 * (qpPermanent.M[i]! + qpPermanent.M[i + 1]!) * ds) / slsEI;
+    delta[i] = delta[i + 1]! + 0.5 * (theta[i]! + theta[i + 1]!) * ds;
+  }
+  const deflectionMm = delta.map((d) => d * 1000);
+  let maxDeflection = 0;
+  let maxDeflectionDepth = 0;
+  deflectionMm.forEach((d, i) => {
+    if (Math.abs(d) > Math.abs(maxDeflection)) {
+      maxDeflection = d;
+      maxDeflectionDepth = qz[i]!;
+    }
+  });
 
   const listing = [...checks].sort((a, b) => b.utilization - a.utilization);
   const utilizationMax = listing.reduce((a, b) => Math.max(a, b.utilization), 0);
@@ -375,6 +466,22 @@ export function analyzeBasementWall(project: BasementWallProject): BasementWallA
     outerVRdc: round(outerVRdc),
     baseDowelAnchorageRequired: Math.round(baseDowelAnchorageRequired),
     baseDowelAnchorageAvailable: Math.round(baseDowelAnchorageAvailable),
+    topDowelAsProvided: Math.round(topDowelAsProvided),
+    topInterfaceVEdi: round(vEdi, 3),
+    topInterfaceVRdi: round(vRdi, 3),
+    topDowelAnchorageRequired: Math.round(topDowelAnchorageRequired),
+    topDowelAnchorageAvailable: Math.round(topDowelAnchorageAvailable),
+    innerMRdMax: round(csBaseFlex.mRdMax),
+    outerMRdMax: round(psSpanFlex.mRdMax),
+    permanentDiagram: {
+      z: permanentGov.z.map((v) => round(v, 4)),
+      M: permanentGov.M.map((v) => round(v, 2)),
+      V: permanentGov.V.map((v) => round(v, 2)),
+      deflection: permanentGov.z.map((zz) => round(interp(qz, deflectionMm, zz), 3)),
+    },
+    slsEI: Math.round(slsEI),
+    maxDeflection: round(maxDeflection, 2),
+    maxDeflectionDepth: Math.round(maxDeflectionDepth * 1000),
     sigmaSqpInner: round(innerCrack.sigmaSqp),
     crackWidthInner: round(innerCrack.crackWidth, 3),
     sigmaSqpOuter: round(outerCrack.sigmaSqp),
