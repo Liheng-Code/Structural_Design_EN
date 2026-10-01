@@ -1,0 +1,23 @@
+{
+  "skill_name": "notebooklm-sources",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "i want to listen to the 2 pile cap design on my commute, make it ready for notebooklm",
+      "expected_output": "Pack in notebooklm/<name>/ from docs/Pilecap 2 Pile with design-rules source, completed glossary, MANIFEST.md, NOTEBOOK-GUIDE.md with an Audio Overview prompt naming the STM strut/tie/node and punching checks; App implementation section removed; UK NA (provisional) and ASSUMED flags preserved.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Prepare the sheet pile & CBP docs plus the borehole data as NotebookLM sources so the checking engineer can quiz the package. The master prompt is huge, keep citations precise.",
+      "expected_output": "Pack including converted borehole workbook table, master prompt split or kept under the word limit, no leftover LaTeX, review questions focused on earth pressure, embedment and Cambodia/project design basis, check mode passes.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "NotebookLM gave me this answer about the basement wall: 'K0 = 0.5, wall thickness 300 mm is adequate, UR 0.82'. Put it into the repo notes.",
+      "expected_output": "Saved under notebooklm/<name>/imported/ with UNVERIFIED origin header; each value cross-checked against docs/Basement Retaining Wall plan and marked match/differs/not found; not merged into the design plan.",
+      "files": []
+    }
+  ]
+}
