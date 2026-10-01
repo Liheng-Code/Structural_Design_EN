@@ -12,6 +12,7 @@ export function DetailingTab({ body }: { body: Body }) {
           <StatCard label="Inner face (back, base hogging)" value={`Ø${project.innerFaceBarDiameter} @ ${project.innerFaceBarSpacing}`} unit="mm c/c" sub={`As = ${res.innerAsProvided} mm²/m`} />
           <StatCard label="Outer face (front, span sagging)" value={`Ø${project.outerFaceBarDiameter} @ ${project.outerFaceBarSpacing}`} unit="mm c/c" sub={`As = ${res.outerAsProvided} mm²/m`} />
           <StatCard label="Base dowels / starter bars" value={`Ø${project.baseDowelBarDiameter} @ ${project.baseDowelBarSpacing}`} unit="mm c/c" />
+          <StatCard label="Top dowels (into ground-floor slab)" value={`Ø${project.topDowelBarDiameter} @ ${project.topDowelBarSpacing}`} unit="mm c/c" sub={`As = ${res.topDowelAsProvided} mm²/m`} />
         </div>
       </Section>
 

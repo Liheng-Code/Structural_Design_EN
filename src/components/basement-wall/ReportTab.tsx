@@ -78,7 +78,10 @@ export function ReportTab({ body }: { body: Body }) {
           </p>
           <p className="font-mono text-xs mt-1">
             Permanent: prop reaction P = {res.permanent.propReaction} kN/m · base M_Ed = {res.permanent.baseMEd} kNm/m, V_Ed = {res.permanent.baseVEd} kN/m
-            · span M_Ed = {res.permanent.spanMEd} kNm/m at {res.permanent.spanDepthFromTop} mm from top, V_Ed = {res.permanent.spanVEd} kN/m
+            · span M_Ed = {res.permanent.spanMEd} kNm/m at {res.permanent.spanDepthFromTop} mm from top, V_Ed (max, prop to contraflexure) = {res.permanent.spanVEd} kN/m
+          </p>
+          <p className="font-mono text-xs mt-1">
+            SLS (QP) deflection: δ_max = {res.maxDeflection} mm at {res.maxDeflectionDepth} mm from top · EI = Ecm·0.5·Ig = {res.slsEI} kNm²/m (short-term, indicative)
           </p>
         </section>
 
@@ -100,10 +103,12 @@ export function ReportTab({ body }: { body: Body }) {
               {row("UL-03", "Permanent base flexure (inner)", `${res.checks.find((c) => c.id === "UL-03")?.demand ?? 0} mm²/m`, `${res.innerAsProvided} mm²/m`)}
               {row("UL-04", "Permanent base shear (inner)", `${res.permanent.baseVEd} kN/m`, `${res.innerVRdc} kN/m`)}
               {row("UL-05", "Permanent span flexure (outer)", `${res.checks.find((c) => c.id === "UL-05")?.demand ?? 0} mm²/m`, `${res.outerAsProvided} mm²/m`)}
-              {row("UL-06", "Permanent span shear (outer)", `${res.permanent.spanVEd} kN/m`, `${res.outerVRdc} kN/m`)}
+              {row("UL-06", "Permanent shear, prop to contraflexure (outer)", `${res.permanent.spanVEd} kN/m`, `${res.outerVRdc} kN/m`)}
               {row("UL-07", "Min. reinforcement (inner)", `${res.innerAsMin} mm²/m`, `${res.innerAsProvided} mm²/m`)}
               {row("UL-08", "Min. reinforcement (outer)", `${res.outerAsMin} mm²/m`, `${res.outerAsProvided} mm²/m`)}
               {row("DT-09", "Base dowel anchorage", `${res.baseDowelAnchorageRequired} mm`, `${res.baseDowelAnchorageAvailable} mm`)}
+              {row("UL-17", "Prop transfer — joint interface shear", `${res.topInterfaceVEdi} MPa`, `${res.topInterfaceVRdi} MPa`)}
+              {row("DT-18", "Top dowel anchorage into slab", `${res.topDowelAnchorageRequired} mm`, `${res.topDowelAnchorageAvailable} mm`)}
               {row("SL-13", "Crack width — inner (QP)", `${res.crackWidthInner} mm`, `${res.crackLimit} mm`)}
               {row("SL-14", "Crack width — outer (QP)", `${res.crackWidthOuter} mm`, `${res.crackLimit} mm`)}
             </tbody>

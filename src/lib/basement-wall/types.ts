@@ -88,7 +88,7 @@ export interface StageForces {
   baseMEd: number; // kNm/m, at base (hogging, back face), magnitude
   baseVEd: number; // kN/m, at base
   spanMEd: number; // kNm/m, max sagging (front face), magnitude (0 if none, e.g. construction stage)
-  spanVEd: number; // kN/m, at point of max sagging
+  spanVEd: number; // kN/m, max |V| over the sagging (outer-face tension) zone — governs at the top prop
   spanDepthFromTop: number; // mm, location of max sagging moment measured from top (0 if none)
 }
 
@@ -123,6 +123,28 @@ export interface BasementWallAnalysisResult {
 
   baseDowelAnchorageRequired: number; // mm
   baseDowelAnchorageAvailable: number; // mm
+
+  // Top connection (ground-floor slab prop) — EN 1992-1-1 §6.2.5 interface shear + §8.4 anchorage
+  topDowelAsProvided: number; // mm2/m
+  topInterfaceVEdi: number; // MPa, design interface shear stress from the ULS prop reaction
+  topInterfaceVRdi: number; // MPa, interface shear resistance (rough joint, σn = 0)
+  topDowelAnchorageRequired: number; // mm
+  topDowelAnchorageAvailable: number; // mm
+
+  // Section capacity limit (singly reinforced, K' = 0.167)
+  innerMRdMax: number; // kNm/m
+  outerMRdMax: number; // kNm/m
+
+  /** Permanent-stage diagrams along the wall, z measured from the top (prop) to the base. */
+  permanentDiagram: {
+    z: number[]; // m
+    M: number[]; // kNm/m, ULS governing combination; + = hogging (inner face tension), − = sagging
+    V: number[]; // kN/m, ULS governing combination
+    deflection: number[]; // mm, SLS quasi-permanent, + = towards the basement
+  };
+  slsEI: number; // kNm²/m used for the deflection estimate
+  maxDeflection: number; // mm, SLS quasi-permanent
+  maxDeflectionDepth: number; // mm from top
 
   sigmaSqpInner: number; // MPa, base SLS steel stress
   crackWidthInner: number; // mm
