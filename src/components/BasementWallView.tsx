@@ -89,7 +89,7 @@ export function BasementWallView() {
         })}
       </div>
 
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 flex flex-col">
+      <main className="relative z-10 flex-1 max-w-[1680px] w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
         {activeTab === "overview" && <OverviewTab body={{ project, res, pad }} setActiveTab={setActiveTab} />}
         {activeTab === "geometry" && <GeometryTab body={{ project, res, pad }} />}
         {activeTab === "soil" && <SoilTab body={{ project, res, pad }} />}

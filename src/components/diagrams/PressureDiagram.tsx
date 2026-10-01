@@ -31,13 +31,13 @@ export function PressureDiagram({ stations, side = "L" }: { stations: Station[];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-panel" role="img" aria-label="Lateral pressure diagram">
-      <rect width={W} height={H} fill="#f7f4ec" />
+      <rect width={W} height={H} fill="var(--color-panel)" />
       {[0, 0.25, 0.5, 0.75, 1].map((t) => {
         const p = t * pMax;
         return (
           <g key={t}>
-            <line x1={sx(p)} y1={mt} x2={sx(p)} y2={H - mb} stroke="#e0d8c8" />
-            <text x={sx(p)} y={H - 12} textAnchor="middle" fontSize="10" fill="#5c564e" fontFamily="IBM Plex Mono">
+            <line x1={sx(p)} y1={mt} x2={sx(p)} y2={H - mb} stroke="var(--color-rule)" />
+            <text x={sx(p)} y={H - 12} textAnchor="middle" fontSize="10" fill="var(--color-muted)" fontFamily="IBM Plex Mono">
               {p.toFixed(0)}
             </text>
           </g>

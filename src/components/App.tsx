@@ -19,6 +19,7 @@ import { MVDiagram } from "@/components/diagrams/MVDiagram";
 import { NMInteractionDiagram } from "@/components/diagrams/NMInteractionDiagram";
 import { PressureDiagram } from "@/components/diagrams/PressureDiagram";
 import { CompareResultsView } from "@/components/CompareResultsView";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ApproachPanel,
   CappingPanel,
@@ -124,6 +125,7 @@ export function CalculatorApp() {
               </h1>
             </div>
             <StatusPill status={bundle.overall} />
+            <ThemeToggle variant="pill" />
             <div className="hidden items-center gap-1 sm:flex">
               <Button
                 variant="ghost"

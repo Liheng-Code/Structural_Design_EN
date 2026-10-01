@@ -32,11 +32,11 @@ export function FreeBody({ project, lc }: { project: Project; lc: LoadCaseResult
     <svg viewBox={`0 0 ${W} ${Ht}`} className="w-full h-auto bg-panel" role="img" aria-label="Free body diagram">
       <defs>
         <marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#1c1917" />
+          <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-ink)" />
         </marker>
       </defs>
-      <rect width={W} height={Ht} fill="#f7f4ec" />
-      <rect x={sx(wallX) - 10} y={sy(H)} width="20" height={sy(-D) - sy(H)} fill="#5f656c" stroke="#1c1917" />
+      <rect width={W} height={Ht} fill="var(--color-panel)" />
+      <rect x={sx(wallX) - 10} y={sy(H)} width="20" height={sy(-D) - sy(H)} fill="#5f656c" stroke="var(--color-ink)" />
       {arrows(5, H, 0, -1, "#2f5f8a")}
       {arrows(4, H, 0, 1, "#8a6a3a")}
       {arrows(4, 0, -D, 1, "#1f6b45")}

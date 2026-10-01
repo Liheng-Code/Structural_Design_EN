@@ -82,9 +82,9 @@ export function CrossSection({
         </pattern>
       </defs>
 
-      <rect x="0" y="0" width={W} height={Ht} fill="#f7f4ec" />
+      <rect x="0" y="0" width={W} height={Ht} fill="var(--color-panel)" />
 
-      <line x1="0" y1={sy(rb)} x2={W} y2={sy(rb)} stroke="#c9c0b0" strokeWidth="1" />
+      <line x1="0" y1={sy(rb)} x2={W} y2={sy(rb)} stroke="var(--color-rule)" strokeWidth="1" />
 
       {soilLayerRects(sx(xMin), sx(leftFace) - sx(xMin), true)}
       {soilLayerRects(sx(xR), sx(xMax) - sx(xR), false)}

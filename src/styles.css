@@ -1,6 +1,85 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
+/* CSS Variables for Global Light ('Paper' Aesthetic) & Dark Mode */
+:root {
+  color-scheme: light;
+  --color-navy: #0b2545;
+  --color-navy-mid: #163a5f;
+  --color-navy-deep: #07182d;
+  --color-paper: #f3efe4;
+  --color-paper-2: #e8e2d4;
+  --color-panel: #f7f4ec;
+  --color-panel-muted: #ede7d8;
+  --color-ink: #1c1917;
+  --color-muted: #5c564e;
+  --color-rule: #c9c0b0;
+  --color-rule-strong: #8f8676;
+  --color-accent: #1a4a7a;
+  --color-accent-fg: #f3efe4;
+  --color-pass: #1f6b45;
+  --color-pass-bg: #dce9e1;
+  --color-fail: #9b2f28;
+  --color-fail-bg: #f3ddda;
+  --color-warn: #8a6414;
+  --color-warn-bg: #f3e6c8;
+  --color-info: #1a4a7a;
+  --color-info-bg: #d9e4ef;
+  --color-water: #6a93b5;
+  --color-fill: #d4c7a8;
+  --color-soil: #c4a574;
+  --color-wall: #6d7278;
+  --color-road: #2c3036;
+
+  --title-bg: #0b2545;
+  --title-fg: #f3efe4;
+  --card-bg: #f7f4ec;
+  --card-border: #c9c0b0;
+  --input-bg: #f7f4ec;
+  --input-border: #c9c0b0;
+  --input-fg: #1c1917;
+}
+
+html.dark,
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+  --color-navy: #0e223d;
+  --color-navy-mid: #18375e;
+  --color-navy-deep: #071322;
+  --color-paper: #0b1320;
+  --color-paper-2: #142236;
+  --color-panel: #101c2e;
+  --color-panel-muted: #15243b;
+  --color-ink: #f1f5f9;
+  --color-muted: #94a3b8;
+  --color-rule: #223755;
+  --color-rule-strong: #3b5a86;
+  --color-accent: #38bdf8;
+  --color-accent-fg: #071322;
+  --color-pass: #34d399;
+  --color-pass-bg: #064e3b;
+  --color-fail: #f87171;
+  --color-fail-bg: #7f1d1d;
+  --color-warn: #fbbf24;
+  --color-warn-bg: #78350f;
+  --color-info: #38bdf8;
+  --color-info-bg: #0c4a6e;
+  --color-water: #38bdf8;
+  --color-fill: #443c2c;
+  --color-soil: #58462b;
+  --color-wall: #64748b;
+  --color-road: #1e293b;
+
+  --title-bg: #071220;
+  --title-fg: #f1f5f9;
+  --card-bg: #101c2e;
+  --card-border: #223755;
+  --input-bg: #0c1726;
+  --input-border: #223755;
+  --input-fg: #f1f5f9;
+}
+
 @theme {
   --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", "Segoe UI", sans-serif;
@@ -75,8 +154,29 @@
 }
 
 .title-block {
-  background: var(--color-navy);
-  color: var(--color-paper);
+  background: var(--title-bg, var(--color-navy));
+  color: var(--title-fg, var(--color-paper));
+}
+
+html.dark .text-paper,
+[data-theme="dark"] .text-paper {
+  color: #f1f5f9;
+}
+
+html.dark .text-navy,
+[data-theme="dark"] .text-navy {
+  color: #38bdf8;
+}
+
+html.dark .eng-table th,
+[data-theme="dark"] .eng-table th {
+  color: #38bdf8;
+  background: var(--color-paper-2);
+}
+
+html.dark .eng-table td,
+[data-theme="dark"] .eng-table td {
+  border-color: var(--color-rule);
 }
 
 .status-pass {
@@ -132,6 +232,22 @@
 }
 
 @media print {
+  :root,
+  [data-theme="dark"],
+  html.dark {
+    --color-paper: #ffffff;
+    --color-paper-2: #f8fafc;
+    --color-panel: #ffffff;
+    --color-ink: #0f172a;
+    --color-muted: #475569;
+    --color-rule: #cbd5e1;
+    --color-rule-strong: #94a3b8;
+    --color-navy: #0b2545;
+    --color-navy-mid: #134074;
+    --color-accent: #b45309;
+    --title-bg: #0b2545;
+    --title-fg: #ffffff;
+  }
   .no-print {
     display: none !important;
   }

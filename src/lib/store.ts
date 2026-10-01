@@ -26,6 +26,21 @@ export type NavId =
 
 export type PlatformModule = "modules" | "sheet-pile" | "cbp" | "cbp-detail" | "bored-pile" | "pile-cap" | "retaining-wall" | "basement-wall" | "wind-load";
 
+export type ThemeMode = "light" | "dark";
+
+export function applyThemeToDOM(theme: ThemeMode) {
+  if (typeof document === "undefined") return;
+  const isDark = theme === "dark";
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.setAttribute("data-theme", theme);
+  try {
+    localStorage.setItem("app_theme", theme);
+  } catch {
+    // Ignore storage write failures (e.g. private mode or quota exceeded)
+    void 0;
+  }
+}
+
 interface Store {
   project: Project;
   nav: NavId;
@@ -34,11 +49,14 @@ interface Store {
   isAuthenticated: boolean;
   userEmail: string;
   activeModule: PlatformModule;
+  theme: ThemeMode;
   setNav: (n: NavId) => void;
   setLoadCase: (id: string) => void;
   setHighlight: (s: string | null) => void;
   setProject: (p: Project) => void;
   setActiveModule: (m: PlatformModule) => void;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
   patch: (fn: (p: Project) => void) => void;
   reset: () => void;
   login: (email: string, pass: string) => boolean;
@@ -77,10 +95,22 @@ export const useProject = create<Store>()(
       isAuthenticated: false,
       userEmail: "str.design.test",
       activeModule: "modules",
+      theme: "light",
       setNav: (nav) => set({ nav }),
       setLoadCase: (loadCaseId) => set({ loadCaseId }),
       setHighlight: (highlight) => set({ highlight }),
       setProject: (project) => set({ project }),
+      setTheme: (theme) => {
+        applyThemeToDOM(theme);
+        set({ theme });
+      },
+      toggleTheme: () => {
+        set((s) => {
+          const nextTheme = s.theme === "dark" ? "light" : "dark";
+          applyThemeToDOM(nextTheme);
+          return { theme: nextTheme };
+        });
+      },
       setActiveModule: (activeModule) =>
         set((s) => ({
           activeModule,
@@ -120,6 +150,7 @@ export const useProject = create<Store>()(
         isAuthenticated: s.isAuthenticated,
         userEmail: s.userEmail,
         activeModule: s.activeModule,
+        theme: s.theme,
       }),
       skipHydration: true,
     },

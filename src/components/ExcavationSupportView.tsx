@@ -6,6 +6,7 @@ import { screenPhases } from "@/lib/excavation/staged-analysis";
 import { uid } from "@/lib/utils";
 import { SoilProfileVisualizer, SOIL_ARCHETYPES } from "@/components/SoilProfileVisualizer";
 import { SoilTextureIcon } from "@/components/SoilTextureIcon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Method = "bottom-up" | "top-down" | "semi-top-down";
 
@@ -63,6 +64,7 @@ export function ExcavationSupportView() {
             <p className="font-mono text-[10px] uppercase tracking-[.18em] text-paper/65">Basement excavation support · EN 1997 / EN 1992 / EN 1993 workflow</p>
             <h1 className="truncate font-display text-lg font-semibold">{isCbp ? "CBP Wall" : "Sheet Pile"} · Basement Excavation Design</h1>
           </div>
+          <ThemeToggle variant="pill" />
           <StatusPill status="INPUT REQUIRED" />
         </div>
       </header>

@@ -174,19 +174,19 @@ export function BoredPileView() {
             <div className="border border-slate-300 p-4 rounded bg-white">
               <h3 className="font-bold mb-2">Pile Geometry & Properties</h3>
               <ul className="space-y-1 text-slate-700">
-                <li>Pile Diameter (D): {project.pileDiameter} m</li>
-                <li>Pile Length (L): {project.pileLength} m</li>
-                <li>Concrete Grade: C{project.concreteGrade}</li>
-                <li>Steel Grade: B{project.steelGrade}50B</li>
-                <li>Safety Class / Consequence: {project.reliabilityClass}</li>
+                <li>Pile Diameter (D): {project.pileDiameter ?? project.diameter} mm</li>
+                <li>Pile Length (L): {project.pileLength ?? project.length} m</li>
+                <li>Concrete Grade: {project.concreteGrade}</li>
+                <li>Steel Grade: {project.steelGrade}</li>
+                <li>Safety Class / Consequence: {project.reliabilityClass ?? 'RC2'}</li>
               </ul>
             </div>
             <div className="border border-slate-300 p-4 rounded bg-white">
               <h3 className="font-bold mb-2">Applied Design Loads</h3>
               <ul className="space-y-1 text-slate-700">
-                <li>Characteristic Axial Compression (N_k): {project.axialLoad} kN</li>
-                <li>Characteristic Moment (M_k): {project.momentLoad} kN·m</li>
-                <li>Characteristic Shear (V_k): {project.shearLoad} kN</li>
+                <li>Characteristic Axial Compression (N_k): {project.axialLoad ?? project.nEd} kN</li>
+                <li>Characteristic Moment (M_k): {project.momentLoad ?? project.mEd} kN·m</li>
+                <li>Characteristic Shear (V_k): {project.shearLoad ?? 0} kN</li>
                 <li>Partial Factor on Actions (γ_G): 1.35</li>
               </ul>
             </div>
@@ -336,7 +336,7 @@ export function BoredPileView() {
               <ul className="space-y-1 text-slate-700">
                 <li>Spiral / Hoop Size: Ø8 mm @ 200mm c/c</li>
                 <li>Confinement Status: Adequate</li>
-                <li>Nominal steel mass: ~{(project.pileLength * 15).toFixed(1)} kg/m</li>
+                <li>Nominal steel mass: ~{((project.pileLength ?? project.length) * 15).toFixed(1)} kg/m</li>
               </ul>
             </div>
           </div>

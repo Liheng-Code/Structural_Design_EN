@@ -179,6 +179,42 @@ var BookOpen = createLucideIcon("book-open", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Building2 = createLucideIcon("building-2", [
+	["path", {
+		d: "M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z",
+		key: "1b4qmf"
+	}],
+	["path", {
+		d: "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2",
+		key: "i71pzd"
+	}],
+	["path", {
+		d: "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2",
+		key: "10jefs"
+	}],
+	["path", {
+		d: "M10 6h4",
+		key: "1itunk"
+	}],
+	["path", {
+		d: "M10 10h4",
+		key: "tcdvrf"
+	}],
+	["path", {
+		d: "M10 14h4",
+		key: "kelpxr"
+	}],
+	["path", {
+		d: "M10 18h4",
+		key: "1ulq68"
+	}]
+]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var Calculator = createLucideIcon("calculator", [
 	["rect", {
 		width: "16",
@@ -906,6 +942,21 @@ var Mail = createLucideIcon("mail", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var MapPin = createLucideIcon("map-pin", [["path", {
+	d: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
+	key: "1r0f0z"
+}], ["circle", {
+	cx: "12",
+	cy: "10",
+	r: "3",
+	key: "ilqhr7"
+}]]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var Maximize2 = createLucideIcon("maximize-2", [
 	["polyline", {
 		points: "15 3 21 3 21 9",
@@ -980,6 +1031,16 @@ var Minimize2 = createLucideIcon("minimize-2", [
 		key: "1atl0r"
 	}]
 ]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Mountain = createLucideIcon("mountain", [["path", {
+	d: "m8 3 4 8 5-5 5 15H2L8 3z",
+	key: "otkl63"
+}]]);
 /**
 * @license lucide-react v0.510.0 - ISC
 *
@@ -1452,6 +1513,26 @@ var Waves = createLucideIcon("waves", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Wind = createLucideIcon("wind", [
+	["path", {
+		d: "M12.8 19.6A2 2 0 1 0 14 16H2",
+		key: "148xed"
+	}],
+	["path", {
+		d: "M17.5 8a2.5 2.5 0 1 1 2 4H2",
+		key: "1u4tom"
+	}],
+	["path", {
+		d: "M9.8 4.4A2 2 0 1 1 11 8H2",
+		key: "75valh"
+	}]
+]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var X = createLucideIcon("x", [["path", {
 	d: "M18 6 6 18",
 	key: "1bl5f8"
@@ -1533,4 +1614,4 @@ var ZoomIn = createLucideIcon("zoom-in", [
 	}]
 ]);
 //#endregion
-export { ChevronDown as $, Info as A, Droplets as B, Menu as C, Lock as D, LogOut as E, Funnel as F, Compass as G, Database as H, FolderOpen as I, CircleDot as J, Columns3 as K, FileText as L, GripVertical as M, Grid3x3 as N, LayoutGrid as O, GitCompare as P, ChevronRight as Q, Eye as R, Minimize2 as S, Mail as T, Cpu as U, Download as V, Copy as W, CircleAlert as X, CircleCheck as Y, ChevronUp as Z, Save as _, Waves as a, ArrowLeft as at, Printer as b, TriangleAlert as c, Activity as ct, Table as d, Check as et, Sparkles as f, Search as g, ShieldCheck as h, X as i, ArrowRight as it, HardHat as j, Layers as k, TrendingUp as l, SlidersHorizontal as m, ZoomOut as n, BookOpen as nt, Upload as o, ArrowDown as ot, SlidersVertical as p, CircleHelp as q, Zap as r, ArrowUp as rt, Truck as s, Anchor as st, ZoomIn as t, Calculator as tt, Trash2 as u, Ruler as v, Maximize2 as w, Plus as x, RotateCcw as y, EyeOff as z };
+export { CircleAlert as $, Lock as A, FileText as B, Mountain as C, MapPin as D, Maximize2 as E, GripVertical as F, Database as G, EyeOff as H, Grid3x3 as I, Compass as J, Cpu as K, GitCompare as L, Layers as M, Info as N, Mail as O, HardHat as P, CircleCheck as Q, Funnel as R, Plus as S, Menu as T, Droplets as U, Eye as V, Download as W, CircleHelp as X, Columns3 as Y, CircleDot as Z, Search as _, Wind as a, Building2 as at, RotateCcw as b, Truck as c, ArrowRight as ct, Trash2 as d, Anchor as dt, ChevronUp as et, Table as f, Activity as ft, ShieldCheck as g, SlidersHorizontal as h, X as i, Calculator as it, LayoutGrid as j, LogOut as k, TriangleAlert as l, ArrowLeft as lt, SlidersVertical as m, ZoomOut as n, ChevronDown as nt, Waves as o, BookOpen as ot, Sparkles as p, Copy as q, Zap as r, Check as rt, Upload as s, ArrowUp as st, ZoomIn as t, ChevronRight as tt, TrendingUp as u, ArrowDown as ut, Save as v, Minimize2 as w, Printer as x, Ruler as y, FolderOpen as z };

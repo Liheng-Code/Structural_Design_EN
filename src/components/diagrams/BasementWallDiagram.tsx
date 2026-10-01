@@ -45,8 +45,8 @@ export function BasementWallSection({ project, result }: { project: BasementWall
       <rect x={wallX1} y={topY} width={backfillX1 - wallX1} height={baseBottomY - topY} fill="url(#bwSoil)" />
       <line x1={wallX1} y1={topY} x2={backfillX1} y2={topY} stroke="#a3866a" strokeWidth="1.5" />
 
-      {/* base slab */}
-      <rect x={wallX0 - 90} y={baseTopY} width={backfillX1 - (wallX0 - 90)} height={baseBottomY - baseTopY} fill="rgba(6,182,212,0.1)" stroke="#38bdf8" strokeWidth="2" />
+      {/* base slab — extends into basement (left), flush with outer wall face (wallX1) */}
+      <rect x={wallX0 - 90} y={baseTopY} width={wallX1 - (wallX0 - 90)} height={baseBottomY - baseTopY} fill="rgba(6,182,212,0.1)" stroke="#38bdf8" strokeWidth="2" />
       <rect x={wallX0 - 90} y={baseTopY - 8} width={40} height={8} fill="url(#bwHatch)" stroke="#64748b" strokeWidth="1" />
       <text x={wallX0 - 85} y={baseTopY - 12} fill="#64748b" fontSize="9" fontFamily={MONO}>
         Fixed base

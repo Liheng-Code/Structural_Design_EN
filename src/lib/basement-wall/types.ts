@@ -49,6 +49,11 @@ export interface BasementWallProject {
   outerFaceBarDiameter: number; // mm, front/exposed face — resists permanent-stage span sagging
   outerFaceBarSpacing: number; // mm c/c
 
+  // Top Slab (Ground Floor Diaphragm Prop)
+  topSlabThickness: number; // mm, ground floor slab thickness at wall connection
+  topDowelBarDiameter: number; // mm, dowel/starter bars into top slab
+  topDowelBarSpacing: number; // mm c/c
+
   // Base
   baseThickness: number; // mm, base slab thickness at wall
   baseSupportType: BaseSupportType;
@@ -158,6 +163,10 @@ export const defaultBasementWallProject = (): BasementWallProject => ({
   innerFaceBarSpacing: 150,
   outerFaceBarDiameter: 16,
   outerFaceBarSpacing: 150,
+
+  topSlabThickness: 250,
+  topDowelBarDiameter: 16,
+  topDowelBarSpacing: 150,
 
   baseThickness: 400,
   baseSupportType: "raft",

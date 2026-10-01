@@ -21,16 +21,16 @@ export function MVDiagram({ analysis, mode }: { analysis: AnalysisResult; mode: 
   const title = mode === "M" ? "Bending M (kNm/m)" : mode === "V" ? "Shear V (kN/m)" : "Deflection δ (mm)";
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-panel" role="img" aria-label={title}>
-      <rect width={W} height={H} fill="#f7f4ec" />
-      <line x1={mid} y1={mt} x2={mid} y2={H - mb} stroke="#1c1917" />
-      <path d={`${d} L ${mid} ${sy(zBot)} L ${mid} ${sy(zTop)} Z`} fill="#1a4a7a" fillOpacity="0.18" stroke="#1a4a7a" strokeWidth="1.8" />
-      <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="11" fill="#5c564e" fontFamily="IBM Plex Sans">
+      <rect width={W} height={H} fill="var(--color-panel)" />
+      <line x1={mid} y1={mt} x2={mid} y2={H - mb} stroke="var(--color-ink)" strokeWidth="1" />
+      <path d={`${d} L ${mid} ${sy(zBot)} L ${mid} ${sy(zTop)} Z`} fill="var(--color-accent)" fillOpacity="0.18" stroke="var(--color-accent)" strokeWidth="1.8" />
+      <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--color-muted)" fontFamily="IBM Plex Sans">
         {title}
       </text>
-      <text x={12} y={mt + 8} fontSize="10" fill="#5c564e" fontFamily="IBM Plex Mono">
+      <text x={12} y={mt + 8} fontSize="10" fill="var(--color-muted)" fontFamily="IBM Plex Mono">
         {zTop.toFixed(1)}
       </text>
-      <text x={12} y={H - mb} fontSize="10" fill="#5c564e" fontFamily="IBM Plex Mono">
+      <text x={12} y={H - mb} fontSize="10" fill="var(--color-muted)" fontFamily="IBM Plex Mono">
         {zBot.toFixed(1)}
       </text>
     </svg>

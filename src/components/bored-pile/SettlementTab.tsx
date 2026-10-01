@@ -6,7 +6,7 @@ import { SettlementTable } from "./SettlementTable";
 
 interface SettlementTabProps {
   project: BoredPileProject;
-  setProject: (p: BoredPileProject) => void;
+  setProject?: (p: BoredPileProject) => void;
   results: BoredPileAnalysisResult;
 }
 

@@ -67,6 +67,12 @@ export interface BoredPileProject {
   stiffenerBarDiameter: number; // mm
   stiffenerSpacing: number; // mm
   exposureClass: string; // e.g. XC2, XC3, XD1, XA2
+  pileDiameter?: number;
+  pileLength?: number;
+  axialLoad?: number;
+  momentLoad?: number;
+  shearLoad?: number;
+  reliabilityClass?: string;
 }
 
 export interface LayerResistanceResult {
