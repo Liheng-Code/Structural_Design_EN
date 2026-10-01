@@ -172,7 +172,8 @@ def detect_meta(text: str) -> dict[str, str]:
         meta["status"] = f"{found[0]} (auto-detected — verify)" if found else ""
     codes = sorted(set(re.findall(r"\bEN\s?\d{4}(?:-\d+){0,2}(?::\d{4})?", text)))
     meta["codes"] = ", ".join(c.replace("EN", "EN ").replace("EN  ", "EN ") for c in codes[:12])
-    m = re.search(r"National Annex\**\s*:\s*\**([^\n]+)", text, re.I) or re.search(
+    # stop at the first sentence end so "UK NA (provisional). Model: ..." keeps only the NA
+    m = re.search(r"National Annex\**\s*:\s*\**([^\n]+?)(?:\.\s|\.?$)", text, re.I | re.M) or re.search(
         r"\b((?:UK|Cambodia\w*|French|German|Singapore|Malaysian?)\s+NA\b[^\n.;]*)", text
     )
     meta["na"] = m.group(1).strip(" *") if m else ""
